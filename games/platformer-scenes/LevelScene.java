@@ -80,6 +80,7 @@ public class LevelScene extends Scene {
 
         getCamera().setLimits(level.getWidth(), level.getHeight());
         getCamera().setSmoothness(0.15);
+        getCamera().setDeadZone(40, 160);    // jumps don't move the camera up and down
         getCamera().centerOn(hero.getCenterX(), hero.getCenterY());
 
         buildUI(sprites);

@@ -11,6 +11,9 @@ A small 2D game engine in plain Java, written to be read.
   - **Unity style:** build `Scene`s out of `GameObject`s, tile maps and UI elements,
     and the scene updates and draws all of them for you.
 
+**New here? Read the [PGE Guide](docs/GUIDE.md)**: your first game, how everything
+works, and ideas for extending the engine.
+
 ## Requirements
 
 Java 25 or newer (a full JDK).
@@ -25,6 +28,7 @@ java Build.java demo                # compile everything and run games/demo
 java Build.java platformer          # ... or the platformer (Game interface)
 java Build.java platformer-scenes   # ... or the same platformer built with scenes
 java Build.java                     # just compile
+java Build.java package mygame      # make dist/mygame.zip: a runnable .jar plus assets, to hand in
 ```
 
 `Build.java` is the whole build system: a plain Java file that works on macOS, Linux
@@ -41,7 +45,8 @@ On a Mac, F11 may need the `fn` key.
 
 ## Writing a game
 
-Make a folder in `games/` with a `Main.java`:
+Copy `games/starter` to a new folder in `games/` and start from there. A game is a
+folder with a `Main.java`:
 
 ```java
 import pge.Engine;
@@ -110,6 +115,7 @@ Put your images in `games/yourfolder/assets/`, then run `java Build.java yourfol
 | a camera that follows the hero | `camera.follow(x, y)` in `update()`, `camera.applyTo(canvas)` in `draw()` |
 | a camera that stays inside the level | `camera.setLimits(map.getWidth(), map.getHeight())` |
 | a softer camera | `camera.setSmoothness(0.15)` |
+| a camera that ignores small moves (like jumps) | `camera.setDeadZone(40, 160)` |
 
 Level files are CSV: one line per row, tile numbers separated by commas, `-1` for
 empty. The free [Tiled](https://www.mapeditor.org/) editor can export this format
@@ -192,6 +198,8 @@ engine/src/pge/ui/      UIElement, Box, Label, Button, Picture
 games/demo/             top-down demo: sprites, animation, text, camera, mouse
 games/platformer/       platformer with the Game interface: tile maps, gravity, wall collisions
 games/platformer-scenes/  the same platformer with scenes: menu, enemies, hearts, game over
+games/starter/          a minimal game to copy when starting a new one
+docs/GUIDE.md           the guide
 tools/MakeAssets.java   draws the built-in art and the platformer level with code
 ```
 
@@ -214,5 +222,5 @@ The engine is meant to be read and extended by someone learning Java.
 - [x] **M1:** `Bitmap` loading with transparency, flips, silhouettes, `SpriteSheet`, `Animation`, bitmap font and `drawText`
 - [x] **M2:** `TileMap` from CSV (Tiled-compatible), layers, solid tiles and wall queries, `Camera` with follow, limits and smoothing
 - [x] **M3:** `Scene` and `GameObject`, UI (`Box`, `Label`, `Button`, `Picture`), mouse and pointer input, draw depth
-- [ ] **M4:** an example game and a short guide
+- [x] **M4:** example games, starter template, the guide, `package` command, camera dead zone
 - [ ] **M5:** sound

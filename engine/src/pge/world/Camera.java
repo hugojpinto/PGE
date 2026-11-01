@@ -29,6 +29,12 @@ import pge.gfx.Canvas;
  * SMOOTHNESS
  * By default follow() jumps straight to its target. setSmoothness(0.1) makes it
  * glide there instead, closing 10% of the distance every update. Lower is softer.
+ *
+ * DEAD ZONE
+ * setDeadZone(40, 120) gives the middle of the screen a 40x120 box in which the
+ * target may move without the camera moving at all. The camera only follows once
+ * the target pushes against an edge of the box. A tall dead zone stops the whole
+ * world from bobbing up and down every time a platformer hero jumps.
  */
 public class Camera {
 
@@ -43,6 +49,8 @@ public class Camera {
     private int worldHeight;
 
     private double smoothness = 1.0;
+    private int deadZoneWidth = 0;
+    private int deadZoneHeight = 0;
 
     /** A camera for a screen of this size (usually Engine.getWidth() and Engine.getHeight()). */
     public Camera(int viewWidth, int viewHeight) {
@@ -52,13 +60,35 @@ public class Camera {
 
     // ------------------------------------------------------------------ moving
 
-    /** Moves toward having world point (targetX, targetY) in the middle of the screen. */
+    /**
+     * Moves toward having world point (targetX, targetY) in the middle of the screen,
+     * or, with a dead zone, just inside the dead zone.
+     */
     public void follow(double targetX, double targetY) {
-        double wantedX = targetX - viewWidth / 2.0;
-        double wantedY = targetY - viewHeight / 2.0;
+        double wantedX = wantedPosition(x, targetX, viewWidth, deadZoneWidth);
+        double wantedY = wantedPosition(y, targetY, viewHeight, deadZoneHeight);
         x = x + (wantedX - x) * smoothness;
         y = y + (wantedY - y) * smoothness;
         keepInsideLimits();
+    }
+
+    /**
+     * Where the camera should be along one axis (x or y). The dead zone is centered
+     * on the screen and reaches deadZoneSize / 2 to each side of the middle. If the
+     * target is inside it, stay put. If it is outside, move just enough to bring the
+     * target back to the edge of the dead zone. With no dead zone, that means
+     * "put the target exactly in the middle".
+     */
+    private static double wantedPosition(double position, double target, int viewSize, int deadZoneSize) {
+        double middle = position + viewSize / 2.0;
+        double halfZone = deadZoneSize / 2.0;
+        if (target < middle - halfZone) {
+            return target + halfZone - viewSize / 2.0;
+        }
+        if (target > middle + halfZone) {
+            return target - halfZone - viewSize / 2.0;
+        }
+        return position;
     }
 
     /** Puts world point (targetX, targetY) in the middle of the screen right away, ignoring smoothness. */
@@ -100,6 +130,23 @@ public class Camera {
 
     public double getSmoothness() {
         return smoothness;
+    }
+
+    /** A box in the middle of the screen where the target can move without moving the camera. 0, 0 for none. */
+    public void setDeadZone(int width, int height) {
+        if (width < 0 || height < 0 || width > viewWidth || height > viewHeight) {
+            throw new IllegalArgumentException("The dead zone must fit on the screen, got " + width + "x" + height);
+        }
+        deadZoneWidth = width;
+        deadZoneHeight = height;
+    }
+
+    public int getDeadZoneWidth() {
+        return deadZoneWidth;
+    }
+
+    public int getDeadZoneHeight() {
+        return deadZoneHeight;
     }
 
     // ------------------------------------------------------------------ using it

@@ -1,9 +1,16 @@
 import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.PrintWriter;
 import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.jar.Attributes;
+import java.util.jar.JarOutputStream;
+import java.util.jar.Manifest;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipOutputStream;
 
 import javax.tools.JavaCompiler;
 import javax.tools.ToolProvider;
@@ -12,8 +19,11 @@ import javax.tools.ToolProvider;
  * The PGE build script, written in plain Java so it works the same way on
  * macOS, Linux and Windows. Run it from the PGE folder:
  *
- *   java Build.java          compile the engine and every game into out/
- *   java Build.java demo     compile everything, then run the game in games/demo
+ *   java Build.java                compile the engine and every game into out/
+ *   java Build.java demo           compile everything, then run the game in games/demo
+ *   java Build.java package demo   compile everything, then make dist/demo/ and dist/demo.zip:
+ *                                  the game as one .jar file, its assets, and start scripts,
+ *                                  ready to hand in or share
  *
  * Each game is a folder in games/ with a Main.java (the class with main) and,
  * optionally, an assets/ folder. Games run with their own folder as the working
@@ -46,8 +56,12 @@ public class Build {
         }
         System.out.println("Build OK.");
 
-        if (args.length > 0) {
+        if (args.length == 2 && args[0].equals("package")) {
+            packageGame(args[1]);
+        } else if (args.length == 1) {
             run(args[0]);
+        } else if (args.length > 2) {
+            fail("Usage: java Build.java [game]   or   java Build.java package <game>");
         }
     }
 
@@ -103,6 +117,94 @@ public class Build {
         process.inheritIO();
         int exitCode = process.start().waitFor();
         System.exit(exitCode);
+    }
+
+    // ====================================================================== packaging
+
+    /**
+     * Makes dist/<game>/ with:
+     *   <game>.jar   the engine and the game's classes in one file
+     *   assets/      a copy of the game's assets
+     *   run.sh, run.bat, README.txt
+     * and zips that folder into dist/<game>.zip.
+     */
+    static void packageGame(String gameName) throws IOException {
+        File gameFolder = new File("games/" + gameName);
+        if (!new File("out/games/" + gameName + "/Main.class").isFile()) {
+            fail("No game called '" + gameName + "' with a Main class. Games are folders in games/.");
+        }
+        File distFolder = new File("dist/" + gameName);
+        deleteFolder(distFolder);
+        distFolder.mkdirs();
+
+        // A .jar is a zip file with a "manifest" inside that says which class has main().
+        Manifest manifest = new Manifest();
+        manifest.getMainAttributes().put(Attributes.Name.MANIFEST_VERSION, "1.0");
+        manifest.getMainAttributes().put(Attributes.Name.MAIN_CLASS, "Main");
+        File jarFile = new File(distFolder, gameName + ".jar");
+        JarOutputStream jar = new JarOutputStream(new FileOutputStream(jarFile), manifest);
+        addToZip(jar, new File("out/engine"), "");
+        addToZip(jar, new File("out/games/" + gameName), "");
+        jar.close();
+
+        File assets = new File(gameFolder, "assets");
+        if (assets.isDirectory()) {
+            copyResources(assets, new File(distFolder, "assets"));
+        }
+        writeLines(new File(distFolder, "run.sh"),
+                "#!/bin/sh",
+                "# Starts the game. The game must run from this folder to find its assets.",
+                "cd \"$(dirname \"$0\")\"",
+                "java -jar " + gameName + ".jar");
+        new File(distFolder, "run.sh").setExecutable(true);
+        writeLines(new File(distFolder, "run.bat"),
+                "@echo off",
+                "rem Starts the game. The game must run from this folder to find its assets.",
+                "cd /d \"%~dp0\"",
+                "java -jar " + gameName + ".jar");
+        writeLines(new File(distFolder, "README.txt"),
+                gameName + ", made with PGE (Pinto's Game Engine)",
+                "",
+                "Needs Java " + REQUIRED_JAVA + " or newer.",
+                "",
+                "To play:",
+                "  macOS / Linux:  sh run.sh",
+                "  Windows:        run.bat",
+                "  or, in a terminal in this folder:  java -jar " + gameName + ".jar");
+
+        File zipFile = new File("dist/" + gameName + ".zip");
+        ZipOutputStream zip = new ZipOutputStream(new FileOutputStream(zipFile));
+        addToZip(zip, distFolder, gameName + "/");
+        zip.close();
+
+        System.out.println("Packaged into " + distFolder.getPath() + "/ and " + zipFile.getPath());
+    }
+
+    /** Adds every file under folder to the zip (or jar), with names starting with prefix. */
+    static void addToZip(ZipOutputStream zip, File folder, String prefix) throws IOException {
+        File[] children = folder.listFiles();
+        if (children == null) {
+            return;
+        }
+        for (File child : children) {
+            // Zip files always use "/" between folder names, on every system.
+            String name = prefix + child.getName();
+            if (child.isDirectory()) {
+                addToZip(zip, child, name + "/");
+            } else {
+                zip.putNextEntry(new ZipEntry(name));
+                Files.copy(child.toPath(), zip);
+                zip.closeEntry();
+            }
+        }
+    }
+
+    static void writeLines(File file, String... lines) throws IOException {
+        PrintWriter out = new PrintWriter(file);
+        for (String line : lines) {
+            out.println(line);
+        }
+        out.close();
     }
 
     static void checkJavaVersion() {
