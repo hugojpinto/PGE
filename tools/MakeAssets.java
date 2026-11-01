@@ -15,6 +15,7 @@ import javax.imageio.ImageIO;
  *   games/platformer/assets/tiles.png    the platformer's tile set (16x16 cells)
  *   games/platformer/assets/level1.csv   the platformer's level, main layer
  *   games/platformer/assets/level1-back.csv  ... and its background layer
+ *   games/platformer-scenes/assets/...   the same, plus slimes and the hero's start in the level
  *
  * Run it from the PGE folder:   java tools/MakeAssets.java
  *
@@ -196,48 +197,13 @@ public class MakeAssets {
     static void makeSprites() throws IOException {
         BufferedImage sheet = new BufferedImage(SHEET_COLUMNS * CELL, 4 * CELL, BufferedImage.TYPE_INT_ARGB);
 
-        // Hero: a round blob. Frames 1 and 3 lift the body and move the feet apart.
-        int[] leftFootX = { 4, 2, 4, 6 };
-        int[] rightFootX = { 9, 11, 9, 7 };
         for (int frame = 0; frame < 4; frame++) {
-            int lift = 0;
-            if (frame == 1 || frame == 3) {
-                lift = 1;
-            }
-            rect(sheet, frame, leftFootX[frame], 13, 3, 2, HERO_FEET);
-            rect(sheet, frame, rightFootX[frame], 13, 3, 2, HERO_FEET);
-            ellipse(sheet, frame, 7.5, 8.0 - lift, 6.0, 5.5, HERO_BODY, 15);
-            ellipse(sheet, frame, 5.0, 6.0 - lift, 2.0, 1.5, HERO_LIGHT, 15);
-            rect(sheet, frame, 8, 5 - lift, 2, 3, EYE_WHITE);
-            rect(sheet, frame, 11, 5 - lift, 2, 3, EYE_WHITE);
-            rect(sheet, frame, 9, 6 - lift, 1, 2, PUPIL);
-            rect(sheet, frame, 12, 6 - lift, 1, 2, PUPIL);
-            outline(sheet, frame, OUTLINE);
+            drawHero(sheet, frame, frame);
         }
-
-        // Slime: a dome with a flat bottom. Frame 5 is squashed.
-        double[] slimeWidth = { 6.5, 7.2 };
-        double[] slimeHeight = { 8.0, 6.5 };
-        for (int i = 0; i < 2; i++) {
-            int cell = 4 + i;
-            ellipse(sheet, cell, 7.5, 14.5, slimeWidth[i], slimeHeight[i], SLIME_BODY, 14);
-            ellipse(sheet, cell, 5.0, 14.5 - slimeHeight[i] + 2.5, 1.5, 1.0, SLIME_LIGHT, 14);
-            int eyeY = (int) (14.5 - slimeHeight[i] + 3);
-            rect(sheet, cell, 6, eyeY, 1, 2, PUPIL);
-            rect(sheet, cell, 9, eyeY, 1, 2, PUPIL);
-            outline(sheet, cell, OUTLINE);
-        }
-
-        // Coin: an ellipse that gets thinner and wider again, so it looks like it spins.
-        double[] coinWidth = { 5.0, 3.5, 1.2, 3.5 };
-        for (int i = 0; i < 4; i++) {
-            int cell = 8 + i;
-            ellipse(sheet, cell, 7.5, 7.5, coinWidth[i], 6.0, COIN_GOLD, 15);
-            if (coinWidth[i] > 2) {
-                ellipse(sheet, cell, 7.5, 7.5, coinWidth[i] * 0.5, 3.5, COIN_SHADE, 15);
-                rect(sheet, cell, (int) (7.5 - coinWidth[i] * 0.6), 4, 1, 3, COIN_SHINE);
-            }
-            outline(sheet, cell, COIN_OUTLINE);
+        drawSlime(sheet, 4, 0);
+        drawSlime(sheet, 5, 1);
+        for (int frame = 0; frame < 4; frame++) {
+            drawCoin(sheet, 8 + frame, frame);
         }
 
         // Heart: two circles on top of a triangle.
@@ -253,16 +219,63 @@ public class MakeAssets {
 
         save(sheet, "games/demo/assets/sprites.png");
         save(sheet, "games/platformer/assets/sprites.png");
+        save(sheet, "games/platformer-scenes/assets/sprites.png");
+    }
+
+    /** Hero: a round blob. Frames 1 and 3 lift the body and move the feet apart. */
+    static void drawHero(BufferedImage sheet, int cell, int frame) {
+        int[] leftFootX = { 4, 2, 4, 6 };
+        int[] rightFootX = { 9, 11, 9, 7 };
+        int lift = 0;
+        if (frame == 1 || frame == 3) {
+            lift = 1;
+        }
+        rect(sheet, cell, leftFootX[frame], 13, 3, 2, HERO_FEET);
+        rect(sheet, cell, rightFootX[frame], 13, 3, 2, HERO_FEET);
+        ellipse(sheet, cell, 7.5, 8.0 - lift, 6.0, 5.5, HERO_BODY, 15);
+        ellipse(sheet, cell, 5.0, 6.0 - lift, 2.0, 1.5, HERO_LIGHT, 15);
+        rect(sheet, cell, 8, 5 - lift, 2, 3, EYE_WHITE);
+        rect(sheet, cell, 11, 5 - lift, 2, 3, EYE_WHITE);
+        rect(sheet, cell, 9, 6 - lift, 1, 2, PUPIL);
+        rect(sheet, cell, 12, 6 - lift, 1, 2, PUPIL);
+        outline(sheet, cell, OUTLINE);
+    }
+
+    /** Slime: a dome with a flat bottom. Frame 1 is squashed. */
+    static void drawSlime(BufferedImage sheet, int cell, int frame) {
+        double[] slimeWidth = { 6.5, 7.2 };
+        double[] slimeHeight = { 8.0, 6.5 };
+        ellipse(sheet, cell, 7.5, 14.5, slimeWidth[frame], slimeHeight[frame], SLIME_BODY, 14);
+        ellipse(sheet, cell, 5.0, 14.5 - slimeHeight[frame] + 2.5, 1.5, 1.0, SLIME_LIGHT, 14);
+        int eyeY = (int) (14.5 - slimeHeight[frame] + 3);
+        rect(sheet, cell, 6, eyeY, 1, 2, PUPIL);
+        rect(sheet, cell, 9, eyeY, 1, 2, PUPIL);
+        outline(sheet, cell, OUTLINE);
+    }
+
+    /** Coin: an ellipse that gets thinner and wider again, so it looks like it spins. */
+    static void drawCoin(BufferedImage sheet, int cell, int frame) {
+        double[] coinWidth = { 5.0, 3.5, 1.2, 3.5 };
+        ellipse(sheet, cell, 7.5, 7.5, coinWidth[frame], 6.0, COIN_GOLD, 15);
+        if (coinWidth[frame] > 2) {
+            ellipse(sheet, cell, 7.5, 7.5, coinWidth[frame] * 0.5, 3.5, COIN_SHADE, 15);
+            rect(sheet, cell, (int) (7.5 - coinWidth[frame] * 0.6), 4, 1, 3, COIN_SHINE);
+        }
+        outline(sheet, cell, COIN_OUTLINE);
     }
 
     // ==================================================================== TILES
     //
-    // A 4x2 sheet of 16x16 tiles:
+    // A 4x3 sheet of 16x16 tiles:
     //   0 grass   1 dirt   2 brick   3 stone          (solid)
     //   4 wall    5 bush   6 flower  7 coin marker    (scenery)
+    //   8 slime marker     9 hero marker              (used by platformer-scenes)
+    //
+    // Markers show where the level designer wants something. The game replaces
+    // them with real objects when the level loads.
 
     static void makeTiles() throws IOException {
-        BufferedImage sheet = new BufferedImage(SHEET_COLUMNS * CELL, 2 * CELL, BufferedImage.TYPE_INT_ARGB);
+        BufferedImage sheet = new BufferedImage(SHEET_COLUMNS * CELL, 3 * CELL, BufferedImage.TYPE_INT_ARGB);
         Random random = new Random(42);   // fixed seed: the same "random" speckles every time
 
         // 1 Dirt: brown with darker and lighter speckles
@@ -318,13 +331,13 @@ public class MakeAssets {
         rect(sheet, 6, 7, 6, 1, 1, 0xFFF7D83B);
         outline(sheet, 6, 0xFF6E2A4A);
 
-        // 7 Coin marker: where the level designer wants a coin. The game replaces it with a real coin.
-        ellipse(sheet, 7, 7.5, 7.5, 5.0, 6.0, COIN_GOLD, 15);
-        ellipse(sheet, 7, 7.5, 7.5, 2.5, 3.5, COIN_SHADE, 15);
-        rect(sheet, 7, 4, 4, 1, 3, COIN_SHINE);
-        outline(sheet, 7, COIN_OUTLINE);
+        // 7, 8, 9 Markers: a coin, a slime, the hero's starting spot
+        drawCoin(sheet, 7, 0);
+        drawSlime(sheet, 8, 0);
+        drawHero(sheet, 9, 0);
 
         save(sheet, "games/platformer/assets/tiles.png");
+        save(sheet, "games/platformer-scenes/assets/tiles.png");
     }
 
     /** Fills a tile with a base color and sprinkles darker and lighter pixels over it. */
@@ -344,11 +357,17 @@ public class MakeAssets {
     // of characters, one character per tile:
     //
     //   G grass  D dirt  B brick  S stone  b bush  f flower  c coin  (space) empty
+    //   e slime  p hero start   (only in the platformer-scenes version)
 
     static final int LEVEL_COLUMNS = 80;
     static final int LEVEL_ROWS = 28;
 
     static void makeLevel() throws IOException {
+        makeLevel(false, "games/platformer/assets/");
+        makeLevel(true, "games/platformer-scenes/assets/");
+    }
+
+    static void makeLevel(boolean withCharacters, String folder) throws IOException {
         char[][] main = emptyGrid();
         char[][] back = emptyGrid();
 
@@ -412,8 +431,18 @@ public class MakeAssets {
         put(main, 23, 57, "b");
         put(main, 23, 77, "f");
 
-        saveLevel(main, "games/platformer/assets/level1.csv");
-        saveLevel(back, "games/platformer/assets/level1-back.csv");
+        if (withCharacters) {
+            put(main, 23, 1, "p");
+            put(main, 23, 20, "e");
+            put(main, 23, 42, "e");
+            put(main, 23, 55, "e");
+            put(main, 20, 48, "e");
+            put(main, 13, 20, "e");
+            put(main, 23, 71, "e");
+        }
+
+        saveLevel(main, folder + "level1.csv");
+        saveLevel(back, folder + "level1-back.csv");
     }
 
     static char[][] emptyGrid() {
@@ -442,7 +471,7 @@ public class MakeAssets {
 
     /** Writes the grid as CSV: one line per row, tile numbers separated by commas. */
     static void saveLevel(char[][] grid, String path) throws IOException {
-        String letters = "GDBSwbfc";    // the position of each letter is its tile number
+        String letters = "GDBSwbfcep";    // the position of each letter is its tile number
         PrintWriter out = new PrintWriter(path);
         for (int row = 0; row < LEVEL_ROWS; row++) {
             StringBuilder line = new StringBuilder();

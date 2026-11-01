@@ -5,8 +5,11 @@ A small 2D game engine in plain Java, written to be read.
 - **No dependencies.** Only the JDK.
 - **No magic.** The engine draws every pixel itself into an `int[]` array. The JDK only
   opens a window, reports key presses, and shows the finished picture once per frame.
-- **Pico-8 simplicity, Unity-style convenience.** Implement `init()`, `update()` and
-  `draw()`, and the engine calls them for you, 60 times a second.
+- **Two ways to make a game.**
+  - **Pico-8 style:** implement `init()`, `update()` and `draw()` from the `Game`
+    interface, and the engine calls them for you, 60 times a second.
+  - **Unity style:** build `Scene`s out of `GameObject`s, tile maps and UI elements,
+    and the scene updates and draws all of them for you.
 
 ## Requirements
 
@@ -18,9 +21,10 @@ version listed in `.sdkmanrc`.
 ## Quick start
 
 ```sh
-java Build.java demo         # compile everything and run games/demo
-java Build.java platformer   # ... or the platformer
-java Build.java              # just compile
+java Build.java demo                # compile everything and run games/demo
+java Build.java platformer          # ... or the platformer (Game interface)
+java Build.java platformer-scenes   # ... or the same platformer built with scenes
+java Build.java                     # just compile
 ```
 
 `Build.java` is the whole build system: a plain Java file that works on macOS, Linux
@@ -112,6 +116,65 @@ empty. The free [Tiled](https://www.mapeditor.org/) editor can export this forma
 (File > Export As > CSV, one file per layer). `games/platformer` shows how to stop a
 character at walls: move one pixel at a time and ask the map before every step.
 
+### Scenes and game objects
+
+Instead of one big `Game` class, a game can be split into screens (`Scene`) and
+the things on them (`GameObject`). Compare `games/platformer` and
+`games/platformer-scenes`: the same game, written both ways.
+
+```java
+public class Coin extends GameObject {
+    public Coin(double x, double y, Bitmap picture) {
+        super(x, y);
+        setSprite(picture);
+        setName("coin");
+    }
+
+    @Override
+    public void update() {
+        Hero hero = (Hero) getScene().find("hero");
+        if (overlaps(hero)) {
+            remove();
+        }
+    }
+}
+
+public class Level1 extends Scene {
+    @Override
+    public void start() {
+        add(new Hero(32, 300));
+        add(new Coin(100, 280, coinPicture));
+        addUI(new Label("Collect the coin!", 4, 4));
+    }
+}
+
+// in main:
+Engine.run(new Level1(), 640, 360);
+// to change screens:
+Engine.setScene(new GameOverScene());
+```
+
+| You want | Use |
+|---|---|
+| an object with a picture | extend `GameObject`, then `setSprite(...)` or `setAnimation(...)` |
+| its behavior | override `update()` (and `start()`, `draw(canvas)` if needed) |
+| to know if two objects touch | `overlaps(other)`; adjust with `setHitbox(x, y, width, height)` |
+| to find another object | `getScene().find("hero")`, or `findAll("slime")` |
+| to get rid of an object | `remove()` |
+| to draw something in front | `setDepth(10)`: higher depth is drawn on top |
+| a background or sky | override the scene's `drawBackground(canvas)` |
+| a panel, text, an icon | `addUI(new Box(...))`, `new Label(...)`, `new Picture(...)` |
+| a clickable button | `addUI(button)`, then `if (button.wasClicked())` in `update()` |
+
+### Mouse and touch
+
+| You want | Use |
+|---|---|
+| where the pointer is (screen pixels) | `Input.getPointerX()`, `Input.getPointerY()` |
+| where the pointer is in the world | `camera.toWorldX(Input.getPointerX())` |
+| a click | `Input.wasPointerPressed()` (left button or a finger) |
+| other buttons, the wheel | `Input.isMouseDown(Mouse.RIGHT)`, `Input.getWheel()` |
+
 `640, 360` is the size of the game's picture in pixels. The window shows it at a
 whole-number scale (3x on a 1080p screen), so pixels stay crisp. `480, 360` gives a 4:3
 game.
@@ -122,10 +185,13 @@ game.
 Build.java              build and run script
 engine/src/pge/         Engine (the game loop), Game, Window
 engine/src/pge/gfx/     Canvas (all drawing), Color, Bitmap, SpriteSheet, Animation, Font (+ font.png)
-engine/src/pge/input/   Input, Key
+engine/src/pge/input/   Input, Key, Mouse
 engine/src/pge/world/   TileMap, Camera
-games/demo/             top-down demo: sprites, animation, text, camera
-games/platformer/       platformer: tile maps, layers, gravity, jumping, wall collisions
+engine/src/pge/scene/   Scene, GameObject, SceneRunner
+engine/src/pge/ui/      UIElement, Box, Label, Button, Picture
+games/demo/             top-down demo: sprites, animation, text, camera, mouse
+games/platformer/       platformer with the Game interface: tile maps, gravity, wall collisions
+games/platformer-scenes/  the same platformer with scenes: menu, enemies, hearts, game over
 tools/MakeAssets.java   draws the built-in art and the platformer level with code
 ```
 
@@ -147,6 +213,6 @@ The engine is meant to be read and extended by someone learning Java.
 - [x] **M0:** window, game loop, fullscreen, `Canvas` primitives (pixels, lines, rectangles, circles), camera, keyboard
 - [x] **M1:** `Bitmap` loading with transparency, flips, silhouettes, `SpriteSheet`, `Animation`, bitmap font and `drawText`
 - [x] **M2:** `TileMap` from CSV (Tiled-compatible), layers, solid tiles and wall queries, `Camera` with follow, limits and smoothing
-- [ ] **M3:** `Scene` and `GameObject`, UI (`Box`, `Label`, `Button`), mouse and pointer input, draw depth
+- [x] **M3:** `Scene` and `GameObject`, UI (`Box`, `Label`, `Button`, `Picture`), mouse and pointer input, draw depth
 - [ ] **M4:** an example game and a short guide
 - [ ] **M5:** sound

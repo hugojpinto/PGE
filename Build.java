@@ -63,7 +63,13 @@ public class Build {
         List<String> arguments = new ArrayList<>();
         arguments.add("--release");
         arguments.add(String.valueOf(REQUIRED_JAVA));
-        arguments.add("-Xlint:all");
+        if (classPath == null) {
+            arguments.add("-Xlint:all");     // the engine: every warning
+        } else {
+            // Games: every warning except "this-escape", which complains about calling
+            // methods like setName(...) in a constructor. That is fine in game code.
+            arguments.add("-Xlint:all,-this-escape");
+        }
         arguments.add("-encoding");
         arguments.add("UTF-8");
         arguments.add("-d");

@@ -4,6 +4,8 @@ import pge.gfx.Canvas;
 import pge.gfx.Color;
 import pge.input.Input;
 import pge.input.Key;
+import pge.scene.Scene;
+import pge.scene.SceneRunner;
 
 /**
  * Starts and runs a game.
@@ -11,6 +13,10 @@ import pge.input.Key;
  *   public static void main(String[] args) {
  *       Engine.run(new MyGame(), 640, 360);
  *   }
+ *
+ * MyGame can be a Game (you write update() and draw() yourself) or a Scene (you
+ * add objects and the scene updates and draws them). Games made of scenes switch
+ * between screens with Engine.setScene(new OtherScene()).
  *
  * The width and height are the size of the game's picture in pixels, not the size of
  * the window. The window is a whole-number multiple of it (640x360 becomes 1920x1080
@@ -43,6 +49,7 @@ public final class Engine {
     private static final int MAX_UPDATES_PER_FRAME = 5;
 
     private static Window window;
+    private static SceneRunner sceneRunner = null;
     private static Canvas canvas;
     private static String title;
     private static boolean running = false;
@@ -89,6 +96,34 @@ public final class Engine {
         }
         window.close();
         System.exit(0);
+    }
+
+    /** Runs a game made of scenes, starting with this one, in a window titled "PGE". */
+    public static void run(Scene firstScene, int width, int height) {
+        run(firstScene, width, height, "PGE");
+    }
+
+    /** Runs a game made of scenes, starting with this one. */
+    public static void run(Scene firstScene, int width, int height, String windowTitle) {
+        sceneRunner = new SceneRunner(firstScene);
+        run(sceneRunner, width, height, windowTitle);
+    }
+
+    /** Switches to another scene, at the start of the next update. */
+    public static void setScene(Scene scene) {
+        if (sceneRunner == null) {
+            throw new IllegalStateException("Engine.setScene only works in games started with a Scene: "
+                    + "Engine.run(new MyScene(), width, height)");
+        }
+        sceneRunner.changeScene(scene);
+    }
+
+    /** The scene that is running now, or null if the game was not started with a Scene. */
+    public static Scene getScene() {
+        if (sceneRunner == null) {
+            return null;
+        }
+        return sceneRunner.getCurrentScene();
     }
 
     // ------------------------------------------------------------------ for games

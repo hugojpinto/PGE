@@ -127,6 +127,9 @@ class Window {
         int left = (windowWidth - drawWidth) / 2;
         int top = (windowHeight - drawHeight) / 2;
 
+        // Input needs to know where the picture is, to turn mouse positions into game positions.
+        Input.setScreenArea(left, top, drawWidth, drawHeight, gameWidth, gameHeight);
+
         // A BufferStrategy draws into a hidden buffer, then show() swaps it onto the
         // screen in one go, so the player never sees a half-drawn frame. The two loops
         // are the JDK's recommended way to handle the rare case where that hidden

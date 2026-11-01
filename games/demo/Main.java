@@ -13,6 +13,7 @@ import pge.world.Camera;
  * PGE demo: walk around a world bigger than the screen and collect every coin.
  *
  *   Arrows or WASD   move
+ *   Mouse click      jump the hero to that spot
  *   Space            flash
  *   R                restart
  *   Escape           quit
@@ -131,6 +132,14 @@ public class Main implements Game {
         if (Input.wasPressed(Key.R)) {
             restart();
         }
+        // The pointer is in screen pixels; the camera turns that into a world position.
+        if (Input.wasPointerPressed() && Input.isPointerInside()) {
+            heroX = camera.toWorldX(Input.getPointerX()) - SPRITE_SIZE / 2;
+            heroY = camera.toWorldY(Input.getPointerY()) - SPRITE_SIZE / 2;
+            heroX = clamp(heroX, 0, WORLD_WIDTH - SPRITE_SIZE);
+            heroY = clamp(heroY, 0, WORLD_HEIGHT - SPRITE_SIZE);
+            flashTimer = FLASH_UPDATES;
+        }
         if (Input.wasPressed(Key.ESCAPE)) {
             Engine.stop();
         }
@@ -180,7 +189,7 @@ public class Main implements Game {
         canvas.resetCamera();
         drawScore(canvas);
         drawMiniMap(canvas);
-        canvas.drawText("Arrows: move   Space: flash   R: restart   F3: stats", 6, canvas.getHeight() - 12, Color.GRAY);
+        canvas.drawText("Arrows: move   Click: jump there   Space: flash   R: restart", 6, canvas.getHeight() - 12, Color.GRAY);
 
         if (coinsCollected == COIN_COUNT) {
             drawCentered(canvas, "YOU WIN!", canvas.getHeight() / 2 - 24, Color.YELLOW, 4);
