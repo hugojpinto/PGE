@@ -18,8 +18,9 @@ version listed in `.sdkmanrc`.
 ## Quick start
 
 ```sh
-java Build.java demo      # compile everything and run games/demo
-java Build.java           # just compile
+java Build.java demo         # compile everything and run games/demo
+java Build.java platformer   # ... or the platformer
+java Build.java              # just compile
 ```
 
 `Build.java` is the whole build system: a plain Java file that works on macOS, Linux
@@ -92,6 +93,25 @@ Put your images in `games/yourfolder/assets/`, then run `java Build.java yourfol
 | centered text | `canvas.getTextWidth(text)` tells you how wide it is |
 | your own font | `canvas.setFont(Font.load("assets/myfont.png", 8, 8))`, laid out like `engine/src/pge/gfx/font.png` |
 
+### Levels and the camera
+
+| You want | Use |
+|---|---|
+| a level made of tiles | `TileMap.load("assets/level1.csv", tileSheet)`, then `map.draw(canvas)` |
+| walls | `map.setSolid(tileNumber, true)` |
+| "would I hit a wall there?" | `map.overlapsSolid(x, y, width, height)` |
+| the tile at a position | `map.getTileAt(x, y)`, or `map.getTile(column, row)` |
+| change the level while playing | `map.setTile(column, row, tileNumber)` (use `TileMap.EMPTY` to clear) |
+| scenery behind the level | a second `TileMap`, drawn first |
+| a camera that follows the hero | `camera.follow(x, y)` in `update()`, `camera.applyTo(canvas)` in `draw()` |
+| a camera that stays inside the level | `camera.setLimits(map.getWidth(), map.getHeight())` |
+| a softer camera | `camera.setSmoothness(0.15)` |
+
+Level files are CSV: one line per row, tile numbers separated by commas, `-1` for
+empty. The free [Tiled](https://www.mapeditor.org/) editor can export this format
+(File > Export As > CSV, one file per layer). `games/platformer` shows how to stop a
+character at walls: move one pixel at a time and ask the map before every step.
+
 `640, 360` is the size of the game's picture in pixels. The window shows it at a
 whole-number scale (3x on a 1080p screen), so pixels stay crisp. `480, 360` gives a 4:3
 game.
@@ -103,11 +123,13 @@ Build.java              build and run script
 engine/src/pge/         Engine (the game loop), Game, Window
 engine/src/pge/gfx/     Canvas (all drawing), Color, Bitmap, SpriteSheet, Animation, Font (+ font.png)
 engine/src/pge/input/   Input, Key
-games/demo/             the demo game (and its assets/)
-tools/MakeAssets.java   draws the default font and the demo sprites with code
+engine/src/pge/world/   TileMap, Camera
+games/demo/             top-down demo: sprites, animation, text, camera
+games/platformer/       platformer: tile maps, layers, gravity, jumping, wall collisions
+tools/MakeAssets.java   draws the built-in art and the platformer level with code
 ```
 
-The built-in art (font and demo sprites) is drawn by `tools/MakeAssets.java`. Run
+The built-in art (font, sprites, tiles) and the platformer's level are made by `tools/MakeAssets.java`. Run
 `java tools/MakeAssets.java` to re-create it, or simply edit the PNGs in any pixel editor.
 
 ## Engine code rules
@@ -124,7 +146,7 @@ The engine is meant to be read and extended by someone learning Java.
 
 - [x] **M0:** window, game loop, fullscreen, `Canvas` primitives (pixels, lines, rectangles, circles), camera, keyboard
 - [x] **M1:** `Bitmap` loading with transparency, flips, silhouettes, `SpriteSheet`, `Animation`, bitmap font and `drawText`
-- [ ] **M2:** `TileMap` from CSV (works with the Tiled editor), `Camera` follow and clamp, tile queries
+- [x] **M2:** `TileMap` from CSV (Tiled-compatible), layers, solid tiles and wall queries, `Camera` with follow, limits and smoothing
 - [ ] **M3:** `Scene` and `GameObject`, UI (`Box`, `Label`, `Button`), mouse and pointer input, draw depth
 - [ ] **M4:** an example game and a short guide
 - [ ] **M5:** sound

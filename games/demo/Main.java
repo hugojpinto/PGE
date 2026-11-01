@@ -7,6 +7,7 @@ import pge.gfx.Color;
 import pge.gfx.SpriteSheet;
 import pge.input.Input;
 import pge.input.Key;
+import pge.world.Camera;
 
 /**
  * PGE demo: walk around a world bigger than the screen and collect every coin.
@@ -33,6 +34,7 @@ public class Main implements Game {
     Animation heroWalk;
     Animation coinSpin;
     Bitmap heart;
+    Camera camera;
 
     // The hero
     double heroX;
@@ -63,6 +65,9 @@ public class Main implements Game {
         coinSpin = new Animation(sheet.getFrames(8, 4), 7);
         heart = sheet.get(12);
 
+        camera = new Camera(Engine.getWidth(), Engine.getHeight());
+        camera.setLimits(WORLD_WIDTH, WORLD_HEIGHT);
+
         for (int i = 0; i < STAR_COUNT; i++) {
             starX[i] = randomBetween(0, WORLD_WIDTH);
             starY[i] = randomBetween(0, WORLD_HEIGHT);
@@ -74,6 +79,7 @@ public class Main implements Game {
     void restart() {
         heroX = 300;
         heroY = 200;
+        camera.centerOn(heroX + SPRITE_SIZE / 2, heroY + SPRITE_SIZE / 2);
         coinsCollected = 0;
         for (int i = 0; i < COIN_COUNT; i++) {
             coinX[i] = randomBetween(40, WORLD_WIDTH - 40);
@@ -136,6 +142,8 @@ public class Main implements Game {
                 coinsCollected = coinsCollected + 1;
             }
         }
+
+        camera.follow(heroX + SPRITE_SIZE / 2, heroY + SPRITE_SIZE / 2);
     }
 
     @Override
@@ -143,11 +151,7 @@ public class Main implements Game {
         canvas.clear(Color.DARK_BLUE);
 
         // ---- World space: the camera keeps the hero in the middle of the screen
-        int cameraX = (int) heroX + SPRITE_SIZE / 2 - canvas.getWidth() / 2;
-        int cameraY = (int) heroY + SPRITE_SIZE / 2 - canvas.getHeight() / 2;
-        cameraX = (int) clamp(cameraX, 0, WORLD_WIDTH - canvas.getWidth());
-        cameraY = (int) clamp(cameraY, 0, WORLD_HEIGHT - canvas.getHeight());
-        canvas.setCamera(cameraX, cameraY);
+        camera.applyTo(canvas);
 
         for (int i = 0; i < STAR_COUNT; i++) {
             canvas.setPixel(starX[i], starY[i], Color.GRAY);

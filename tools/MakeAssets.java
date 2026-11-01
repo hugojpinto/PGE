@@ -1,14 +1,20 @@
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
+import java.io.PrintWriter;
+import java.util.Random;
 
 import javax.imageio.ImageIO;
 
 /**
  * Draws PGE's built-in pixel art with code and saves it as PNG files:
  *
- *   engine/src/pge/gfx/font.png    the default font (ASCII characters 32 to 127)
- *   games/demo/assets/sprites.png  the demo's sprite sheet (16x16 cells)
+ *   engine/src/pge/gfx/font.png          the default font (ASCII characters 32 to 127)
+ *   games/demo/assets/sprites.png        the demo's sprite sheet (16x16 cells)
+ *   games/platformer/assets/sprites.png  the same sprites, for the platformer
+ *   games/platformer/assets/tiles.png    the platformer's tile set (16x16 cells)
+ *   games/platformer/assets/level1.csv   the platformer's level, main layer
+ *   games/platformer/assets/level1-back.csv  ... and its background layer
  *
  * Run it from the PGE folder:   java tools/MakeAssets.java
  *
@@ -20,6 +26,8 @@ public class MakeAssets {
     public static void main(String[] args) throws IOException {
         makeFont();
         makeSprites();
+        makeTiles();
+        makeLevel();
     }
 
     // ===================================================================== FONT
@@ -244,6 +252,210 @@ public class MakeAssets {
         outline(sheet, heart, HEART_DARK);
 
         save(sheet, "games/demo/assets/sprites.png");
+        save(sheet, "games/platformer/assets/sprites.png");
+    }
+
+    // ==================================================================== TILES
+    //
+    // A 4x2 sheet of 16x16 tiles:
+    //   0 grass   1 dirt   2 brick   3 stone          (solid)
+    //   4 wall    5 bush   6 flower  7 coin marker    (scenery)
+
+    static void makeTiles() throws IOException {
+        BufferedImage sheet = new BufferedImage(SHEET_COLUMNS * CELL, 2 * CELL, BufferedImage.TYPE_INT_ARGB);
+        Random random = new Random(42);   // fixed seed: the same "random" speckles every time
+
+        // 1 Dirt: brown with darker and lighter speckles
+        speckled(sheet, 1, 0xFF8C5A34, 0xFF6B4226, 0xFFA8703F, random);
+
+        // 0 Grass: dirt with a green top and an uneven edge
+        speckled(sheet, 0, 0xFF8C5A34, 0xFF6B4226, 0xFFA8703F, random);
+        rect(sheet, 0, 0, 0, 16, 4, 0xFF4CC04A);
+        rect(sheet, 0, 0, 0, 16, 1, 0xFF8BE070);
+        for (int x = 0; x < CELL; x++) {
+            if (x % 3 != 1) {
+                set(sheet, 0, x, 4, 0xFF2F8A3A);
+            }
+        }
+
+        // 2 Brick: red bricks, every other row shifted by half a brick
+        rect(sheet, 2, 0, 0, 16, 16, 0xFFB0503A);
+        for (int y = 0; y < CELL; y = y + 8) {
+            rect(sheet, 2, 0, y, 16, 1, 0xFF6E2E22);
+            rect(sheet, 2, 0, y + 1, 16, 1, 0xFFCC6A50);
+        }
+        rect(sheet, 2, 0, 1, 1, 7, 0xFF6E2E22);
+        rect(sheet, 2, 8, 9, 1, 7, 0xFF6E2E22);
+
+        // 3 Stone: a gray block, light on the top-left edges, dark on the bottom-right
+        rect(sheet, 3, 0, 0, 16, 16, 0xFF8B8B9E);
+        rect(sheet, 3, 0, 0, 16, 1, 0xFFC9C9D6);
+        rect(sheet, 3, 0, 0, 1, 16, 0xFFC9C9D6);
+        rect(sheet, 3, 0, 15, 16, 1, 0xFF4A4A5E);
+        rect(sheet, 3, 15, 0, 1, 16, 0xFF4A4A5E);
+        rect(sheet, 3, 4, 5, 3, 1, 0xFF6E6E82);
+        rect(sheet, 3, 9, 10, 2, 1, 0xFF6E6E82);
+
+        // 4 Wall: dark bricks for backgrounds
+        rect(sheet, 4, 0, 0, 16, 16, 0xFF3B3B5A);
+        for (int y = 0; y < CELL; y = y + 8) {
+            rect(sheet, 4, 0, y, 16, 1, 0xFF2A2A44);
+        }
+        rect(sheet, 4, 0, 1, 1, 7, 0xFF2A2A44);
+        rect(sheet, 4, 8, 9, 1, 7, 0xFF2A2A44);
+
+        // 5 Bush: three round blobs sitting on the bottom edge
+        ellipse(sheet, 5, 4.5, 11.0, 4.5, 4.5, 0xFF3FA040, 15);
+        ellipse(sheet, 5, 10.5, 10.0, 5.0, 5.5, 0xFF3FA040, 15);
+        ellipse(sheet, 5, 8.0, 13.5, 7.5, 3.0, 0xFF3FA040, 15);
+        ellipse(sheet, 5, 9.0, 7.5, 2.0, 1.5, 0xFF7FD06A, 15);
+        outline(sheet, 5, 0xFF1F5A2A);
+
+        // 6 Flower: a stem with a pink head
+        rect(sheet, 6, 7, 9, 1, 7, 0xFF2F8A3A);
+        rect(sheet, 6, 8, 12, 2, 1, 0xFF2F8A3A);
+        ellipse(sheet, 6, 7.5, 6.5, 2.8, 2.8, 0xFFF283B4, 15);
+        rect(sheet, 6, 7, 6, 1, 1, 0xFFF7D83B);
+        outline(sheet, 6, 0xFF6E2A4A);
+
+        // 7 Coin marker: where the level designer wants a coin. The game replaces it with a real coin.
+        ellipse(sheet, 7, 7.5, 7.5, 5.0, 6.0, COIN_GOLD, 15);
+        ellipse(sheet, 7, 7.5, 7.5, 2.5, 3.5, COIN_SHADE, 15);
+        rect(sheet, 7, 4, 4, 1, 3, COIN_SHINE);
+        outline(sheet, 7, COIN_OUTLINE);
+
+        save(sheet, "games/platformer/assets/tiles.png");
+    }
+
+    /** Fills a tile with a base color and sprinkles darker and lighter pixels over it. */
+    static void speckled(BufferedImage sheet, int cell, int base, int dark, int light, Random random) {
+        rect(sheet, cell, 0, 0, CELL, CELL, base);
+        for (int i = 0; i < 18; i++) {
+            set(sheet, cell, random.nextInt(CELL), random.nextInt(CELL), dark);
+        }
+        for (int i = 0; i < 10; i++) {
+            set(sheet, cell, random.nextInt(CELL), random.nextInt(CELL), light);
+        }
+    }
+
+    // ==================================================================== LEVEL
+    //
+    // The level is 80 x 28 tiles. It is built by writing short strings into a grid
+    // of characters, one character per tile:
+    //
+    //   G grass  D dirt  B brick  S stone  b bush  f flower  c coin  (space) empty
+
+    static final int LEVEL_COLUMNS = 80;
+    static final int LEVEL_ROWS = 28;
+
+    static void makeLevel() throws IOException {
+        char[][] main = emptyGrid();
+        char[][] back = emptyGrid();
+
+        // Ground, with two dips
+        for (int row = 24; row < LEVEL_ROWS; row++) {
+            char ground = 'D';
+            if (row == 24) {
+                ground = 'G';
+            }
+            put(main, row, 0, repeat(ground, LEVEL_COLUMNS));
+        }
+        put(main, 24, 12, "   ");
+        put(main, 25, 12, "GGG");
+        put(main, 24, 36, "   ");
+        put(main, 25, 36, "GGG");
+
+        // A staircase of platforms up to the sky bridge
+        put(main, 20, 5, "SSSSS");
+        put(main, 19, 5, "c c c");
+        put(main, 17, 12, "SSS");
+        put(main, 16, 13, "c");
+        put(main, 14, 18, "SSSSS");
+        put(main, 13, 19, "c c");
+        put(main, 11, 26, "SSS");
+        put(main, 10, 27, "c");
+        put(main, 8, 33, "SSSSS");
+        put(main, 7, 34, "c c");
+        put(main, 8, 42, "SSS");
+        put(main, 7, 43, "c");
+        put(main, 4, 48, "BBBBBBBBBBBBBBBB");
+        put(main, 3, 50, "c   c   c   c");
+
+        // Low platforms
+        put(main, 21, 22, "BBBBBBB");
+        put(main, 20, 23, "c c c");
+        put(main, 18, 33, "SSS");
+        put(main, 17, 34, "c");
+        put(main, 21, 46, "SSSSSSS");
+        put(main, 20, 47, "c c c");
+
+        // The castle: a roof, two walls with doorways at the bottom, and a ledge inside
+        put(main, 14, 62, "BBBBBBBBBBBB");
+        put(main, 13, 64, "c c c c");
+        for (int row = 15; row <= 21; row++) {
+            put(main, row, 62, "B");
+            put(main, row, 73, "B");
+        }
+        put(main, 20, 65, "BBBBBB");
+        put(main, 19, 66, "c  c");
+        put(main, 23, 66, "cccc");
+        for (int row = 15; row <= 23; row++) {
+            put(back, row, 63, repeat('w', 10));
+        }
+
+        // Scenery
+        put(main, 23, 2, "b");
+        put(main, 23, 8, "f");
+        put(main, 23, 19, "f");
+        put(main, 23, 30, "b");
+        put(main, 23, 44, "f");
+        put(main, 23, 57, "b");
+        put(main, 23, 77, "f");
+
+        saveLevel(main, "games/platformer/assets/level1.csv");
+        saveLevel(back, "games/platformer/assets/level1-back.csv");
+    }
+
+    static char[][] emptyGrid() {
+        char[][] grid = new char[LEVEL_ROWS][LEVEL_COLUMNS];
+        for (int row = 0; row < LEVEL_ROWS; row++) {
+            for (int column = 0; column < LEVEL_COLUMNS; column++) {
+                grid[row][column] = ' ';
+            }
+        }
+        return grid;
+    }
+
+    static void put(char[][] grid, int row, int column, String text) {
+        for (int i = 0; i < text.length(); i++) {
+            grid[row][column + i] = text.charAt(i);
+        }
+    }
+
+    static String repeat(char c, int count) {
+        StringBuilder text = new StringBuilder();
+        for (int i = 0; i < count; i++) {
+            text.append(c);
+        }
+        return text.toString();
+    }
+
+    /** Writes the grid as CSV: one line per row, tile numbers separated by commas. */
+    static void saveLevel(char[][] grid, String path) throws IOException {
+        String letters = "GDBSwbfc";    // the position of each letter is its tile number
+        PrintWriter out = new PrintWriter(path);
+        for (int row = 0; row < LEVEL_ROWS; row++) {
+            StringBuilder line = new StringBuilder();
+            for (int column = 0; column < LEVEL_COLUMNS; column++) {
+                if (column > 0) {
+                    line.append(',');
+                }
+                line.append(letters.indexOf(grid[row][column]));   // ' ' is not in letters: -1, empty
+            }
+            out.println(line);
+        }
+        out.close();
+        System.out.println("Wrote " + path);
     }
 
     /** Fills an ellipse inside one cell, but not below row maxY. */
