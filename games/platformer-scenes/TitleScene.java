@@ -20,6 +20,7 @@ public class TitleScene extends Scene {
 
     @Override
     public void start() {
+        Sounds.loadAll();
         int middle = getScreenWidth() / 2;
 
         Box panel = new Box(middle - 130, 70, 260, 200);
@@ -43,7 +44,7 @@ public class TitleScene extends Scene {
         quitButton = new Button("Quit", middle - 50, 204, 100, 24);
         addUI(quitButton);
 
-        Label hint = new Label("or press Enter", middle, 245);
+        Label hint = new Label("or press Enter.  M: sound on/off", middle, 245);
         hint.setCentered(true);
         hint.setColor(Color.GRAY);
         addUI(hint);
@@ -54,10 +55,14 @@ public class TitleScene extends Scene {
         scroll = scroll + 1;    // slowly slide the hills along, to make the menu feel alive
 
         if (playButton.wasClicked() || Input.wasPressed(Key.ENTER)) {
+            Sounds.click.play();
             Engine.setScene(new LevelScene());
         }
         if (quitButton.wasClicked() || Input.wasPressed(Key.ESCAPE)) {
             Engine.stop();
+        }
+        if (Input.wasPressed(Key.M)) {
+            Sounds.toggleMute();
         }
     }
 

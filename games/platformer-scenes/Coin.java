@@ -22,6 +22,7 @@ public class Coin extends GameObject {
         LevelScene level = (LevelScene) getScene();
         if (overlaps(level.getHero())) {
             remove();
+            Sounds.coin.play();
             level.coinCollected();
         }
     }

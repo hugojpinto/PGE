@@ -122,6 +122,19 @@ empty. The free [Tiled](https://www.mapeditor.org/) editor can export this forma
 (File > Export As > CSV, one file per layer). `games/platformer` shows how to stop a
 character at walls: move one pixel at a time and ask the map before every step.
 
+### Sound
+
+| You want | Use |
+|---|---|
+| a sound effect | `Sound jump = Sound.load("assets/jump.wav")` in `init()`, then `jump.play()` |
+| music | `music.loop()`, `music.stop()`, `music.setVolume(0.5)` |
+| a mute key | `Sound.setMasterVolume(0)`, and `1` to unmute |
+| a sound made with code | `Sound.fromSamples(Synth.tone(Synth.SQUARE, 260, 620, 0.16, 0.4))` |
+| a note | `Synth.note(Synth.TRIANGLE, "C5", 0.2, 0.5)` |
+
+WAV files only (Java cannot read MP3 or OGG). `tools/MakeSounds.java` makes the
+platformer's sound effects and music with `Synth`.
+
 ### Scenes and game objects
 
 Instead of one big `Game` class, a game can be split into screens (`Scene`) and
@@ -195,12 +208,14 @@ engine/src/pge/input/   Input, Key, Mouse
 engine/src/pge/world/   TileMap, Camera
 engine/src/pge/scene/   Scene, GameObject, SceneRunner
 engine/src/pge/ui/      UIElement, Box, Label, Button, Picture
-games/demo/             top-down demo: sprites, animation, text, camera, mouse
+engine/src/pge/audio/   Sound, Synth
+games/demo/             top-down demo: sprites, animation, text, camera, mouse, sounds made with code
 games/platformer/       platformer with the Game interface: tile maps, gravity, wall collisions
-games/platformer-scenes/  the same platformer with scenes: menu, enemies, hearts, game over
+games/platformer-scenes/  the same platformer with scenes: menu, enemies, hearts, sound and music
 games/starter/          a minimal game to copy when starting a new one
 docs/GUIDE.md           the guide
 tools/MakeAssets.java   draws the built-in art and the platformer level with code
+tools/MakeSounds.java   makes the platformer's sounds and music with Synth
 ```
 
 The built-in art (font, sprites, tiles) and the platformer's level are made by `tools/MakeAssets.java`. Run
@@ -223,4 +238,4 @@ The engine is meant to be read and extended by someone learning Java.
 - [x] **M2:** `TileMap` from CSV (Tiled-compatible), layers, solid tiles and wall queries, `Camera` with follow, limits and smoothing
 - [x] **M3:** `Scene` and `GameObject`, UI (`Box`, `Label`, `Button`, `Picture`), mouse and pointer input, draw depth
 - [x] **M4:** example games, starter template, the guide, `package` command, camera dead zone
-- [ ] **M5:** sound
+- [x] **M5:** sound: WAV playback, music loops, volume, `Synth` for sounds made with code

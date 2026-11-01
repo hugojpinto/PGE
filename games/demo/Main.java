@@ -1,5 +1,7 @@
 import pge.Engine;
 import pge.Game;
+import pge.audio.Sound;
+import pge.audio.Synth;
 import pge.gfx.Animation;
 import pge.gfx.Bitmap;
 import pge.gfx.Canvas;
@@ -37,6 +39,11 @@ public class Main implements Game {
     Bitmap heart;
     Camera camera;
 
+    // Sounds, made with code instead of loaded from files
+    Sound coinSound;
+    Sound teleportSound;
+    Sound winSound;
+
     // The hero
     double heroX;
     double heroY;
@@ -65,6 +72,15 @@ public class Main implements Game {
         heroWalk = new Animation(sheet.getFrames(0, 4), 8);
         coinSpin = new Animation(sheet.getFrames(8, 4), 7);
         heart = sheet.get(12);
+
+        coinSound = Sound.fromSamples(Synth.join(
+                Synth.note(Synth.SQUARE, "B5", 0.05, 0.25),
+                Synth.note(Synth.SQUARE, "E6", 0.18, 0.25)));
+        teleportSound = Sound.fromSamples(Synth.tone(Synth.SINE, 300, 1200, 0.2, 0.4));
+        winSound = Sound.fromSamples(Synth.join(Synth.join(
+                Synth.note(Synth.TRIANGLE, "C5", 0.12, 0.5),
+                Synth.note(Synth.TRIANGLE, "E5", 0.12, 0.5)),
+                Synth.note(Synth.TRIANGLE, "G5", 0.5, 0.5)));
 
         camera = new Camera(Engine.getWidth(), Engine.getHeight());
         camera.setLimits(WORLD_WIDTH, WORLD_HEIGHT);
@@ -139,6 +155,7 @@ public class Main implements Game {
             heroX = clamp(heroX, 0, WORLD_WIDTH - SPRITE_SIZE);
             heroY = clamp(heroY, 0, WORLD_HEIGHT - SPRITE_SIZE);
             flashTimer = FLASH_UPDATES;
+            teleportSound.play();
         }
         if (Input.wasPressed(Key.ESCAPE)) {
             Engine.stop();
@@ -149,6 +166,10 @@ public class Main implements Game {
             if (!coinTaken[i] && overlaps(heroX, heroY, coinX[i], coinY[i])) {
                 coinTaken[i] = true;
                 coinsCollected = coinsCollected + 1;
+                coinSound.play();
+                if (coinsCollected == COIN_COUNT) {
+                    winSound.play();
+                }
             }
         }
 

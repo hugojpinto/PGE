@@ -25,6 +25,7 @@ public class GameOverScene extends Scene {
 
     @Override
     public void start() {
+        Sounds.gameOver.play();
         int middle = getScreenWidth() / 2;
 
         Box panel = new Box(middle - 120, 90, 240, 170);
@@ -52,10 +53,15 @@ public class GameOverScene extends Scene {
     @Override
     public void update() {
         if (retryButton.wasClicked() || Input.wasPressed(Key.ENTER)) {
+            Sounds.click.play();
             Engine.setScene(new LevelScene());
         }
         if (menuButton.wasClicked() || Input.wasPressed(Key.ESCAPE)) {
+            Sounds.click.play();
             Engine.setScene(new TitleScene());
+        }
+        if (Input.wasPressed(Key.M)) {
+            Sounds.toggleMute();
         }
     }
 

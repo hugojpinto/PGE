@@ -63,6 +63,7 @@ public class Hero extends GameObject {
         boolean jumpPressed = Input.wasPressed(Key.SPACE) || Input.wasPressed(Key.UP) || Input.wasPressed(Key.W);
         if (onGround && jumpPressed) {
             speedY = JUMP_SPEED;
+            Sounds.jump.play();
         }
         if (!jumpHeld && speedY < SHORT_JUMP_SPEED) {
             speedY = SHORT_JUMP_SPEED;
@@ -104,6 +105,7 @@ public class Hero extends GameObject {
         if (speedY > 0 && myBottom <= slimeMiddle) {
             slime.remove();
             speedY = STOMP_BOUNCE_SPEED;
+            Sounds.stomp.play();
         } else if (safeTimer == 0) {
             safeTimer = SAFE_UPDATES_AFTER_HURT;
             speedY = HURT_BOUNCE_SPEED;

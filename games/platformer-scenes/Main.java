@@ -10,6 +10,7 @@ import pge.Engine;
  *
  *   Hero, Slime, Coin   the objects; each one looks after itself in its own update()
  *   Scenery             the sky and hills, shared by all scenes
+ *   Sounds              every sound effect and the music, loaded once
  */
 public class Main {
 

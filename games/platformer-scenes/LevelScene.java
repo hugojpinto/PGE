@@ -43,6 +43,7 @@ public class LevelScene extends Scene {
 
     @Override
     public void start() {
+        Sounds.loadAll();    // already loaded by the title screen, unless a level starts first
         SpriteSheet tiles = SpriteSheet.load("assets/tiles.png", 16, 16);
         SpriteSheet sprites = SpriteSheet.load("assets/sprites.png", 16, 16);
 
@@ -98,7 +99,7 @@ public class LevelScene extends Scene {
         }
         updateScoreText();
 
-        Label help = new Label("Arrows: run   Space: jump   Esc: menu", 6, getScreenHeight() - 12);
+        Label help = new Label("Arrows: run   Space: jump   M: sound   Esc: menu", 6, getScreenHeight() - 12);
         help.setShadowColor(Color.BLACK);
         addUI(help);
 
@@ -129,6 +130,9 @@ public class LevelScene extends Scene {
         if (Input.wasPressed(Key.R) || againButton.wasClicked()) {
             Engine.setScene(new LevelScene());
         }
+        if (Input.wasPressed(Key.M)) {
+            Sounds.toggleMute();
+        }
     }
 
     @Override
@@ -152,6 +156,7 @@ public class LevelScene extends Scene {
         coinsCollected = coinsCollected + 1;
         updateScoreText();
         if (coinsCollected == coinsTotal) {
+            Sounds.win.play();
             winPanel.setVisible(true);
             winLabel.setVisible(true);
             againButton.setVisible(true);
@@ -162,6 +167,7 @@ public class LevelScene extends Scene {
     public void heroHurt() {
         hearts = hearts - 1;
         updateScoreText();
+        Sounds.hurt.play();
         if (hearts <= 0) {
             Engine.setScene(new GameOverScene(coinsCollected, coinsTotal));
         }

@@ -7,12 +7,13 @@ engine". Read it in order the first time; later, jump to the part you need.
 2. [Your first game](#2-your-first-game)
 3. [How a game runs](#3-how-a-game-runs)
 4. [Pictures, animation and text](#4-pictures-animation-and-text)
-5. [Levels, walls and the camera](#5-levels-walls-and-the-camera)
-6. [Bigger games: scenes and game objects](#6-bigger-games-scenes-and-game-objects)
-7. [Handing in your game](#7-handing-in-your-game)
-8. [When something goes wrong](#8-when-something-goes-wrong)
-9. [Inside the engine](#9-inside-the-engine)
-10. [Extending the engine](#10-extending-the-engine)
+5. [Sound and music](#5-sound-and-music)
+6. [Levels, walls and the camera](#6-levels-walls-and-the-camera)
+7. [Bigger games: scenes and game objects](#7-bigger-games-scenes-and-game-objects)
+8. [Handing in your game](#8-handing-in-your-game)
+9. [When something goes wrong](#9-when-something-goes-wrong)
+10. [Inside the engine](#10-inside-the-engine)
+11. [Extending the engine](#11-extending-the-engine)
 
 ---
 
@@ -131,7 +132,7 @@ canvas.resetCamera();                 // screen
 canvas.drawText("Score: " + score, 4, 4, Color.WHITE);
 ```
 
-The `Camera` class (section 5) does the arithmetic for you.
+The `Camera` class (section 6) does the arithmetic for you.
 
 ### Keyboard and mouse
 
@@ -213,11 +214,71 @@ int width = canvas.getTextWidth("GAME OVER", 4);        // for centering
 
 The font is `engine/src/pge/gfx/font.png`. It has the English letters, digits and
 punctuation; letters like `é` or `ç` show as a box. Fix that as an exercise
-(section 10).
+(section 11).
 
 ---
 
-## 5. Levels, walls and the camera
+## 5. Sound and music
+
+### Playing sounds
+
+Put WAV files in your game's `assets` folder (Java can't read MP3 or OGG):
+
+```java
+Sound jump = Sound.load("assets/jump.wav");     // in init(): loading is slow
+jump.play();                                     // in update(), when the player jumps
+```
+
+If the same sound plays again before it has finished, a second copy plays on top
+(up to four at once), so fast coin pickups don't cut each other off.
+
+Music is a sound that repeats:
+
+```java
+Sound music = Sound.load("assets/music.wav");
+music.setVolume(0.5);    // half as loud
+music.loop();            // forever, until music.stop()
+```
+
+A mute key: `Sound.setMasterVolume(0)` silences everything, `1` brings it back. See
+`games/platformer-scenes/Sounds.java`: one class that loads every sound once, so
+any object can call `Sounds.jump.play()`.
+
+Free sounds: [jsfxr](https://sfxr.me) makes retro sound effects in the browser
+(press a button like "Jump" or "Pickup", then export WAV), and
+[Audacity](https://www.audacityteam.org/) converts and edits other files.
+
+### Making sounds with code
+
+A sound is an array of numbers between -1 and 1, 22,050 of them per second, just as
+a picture is an array of colors. `Synth` fills those arrays for you:
+
+```java
+// a "bwoop" that slides from 260 Hz up to 620 Hz in 0.16 seconds, at 40% volume
+Sound jump = Sound.fromSamples(Synth.tone(Synth.SQUARE, 260, 620, 0.16, 0.4));
+
+// two notes one after the other
+Sound coin = Sound.fromSamples(Synth.join(
+        Synth.note(Synth.SQUARE, "B5", 0.06, 0.3),
+        Synth.note(Synth.SQUARE, "E6", 0.2, 0.3)));
+```
+
+Waves: `SQUARE` (buzzy, the classic game sound), `TRIANGLE` (soft, good for bass),
+`SINE` (pure), `SAW` (harsh), `NOISE` (hiss: explosions and drums). Notes are names
+like `"C4"` (middle C), `"F#5"` or `"Bb3"`. `Synth.mix(a, b)` plays two sounds at once.
+
+`games/demo` makes all its sounds this way, with no sound files at all.
+`tools/MakeSounds.java` makes the platformer's sounds *and its music*: music is just
+silence with notes added into it at the right moments (`Synth.addInto`). Change a
+note, run it again, and listen. `sound.save("assets/mysound.wav")` keeps a sound you
+made.
+
+If a computer has no working sound output, PGE prints one warning and the game runs
+silently. It never crashes because of missing speakers.
+
+---
+
+## 6. Levels, walls and the camera
 
 ### Tile maps
 
@@ -283,7 +344,7 @@ canvas.resetCamera();
 
 ---
 
-## 6. Bigger games: scenes and game objects
+## 7. Bigger games: scenes and game objects
 
 With one `Game` class, everything lives in one file: fine for small games, messy
 for big ones. PGE's second way to build a game splits it up:
@@ -379,7 +440,7 @@ any of them with `setVisible(...)`. `TitleScene.java` is a complete menu.
 
 ---
 
-## 7. Handing in your game
+## 8. Handing in your game
 
 ```sh
 java Build.java package mygame
@@ -397,7 +458,7 @@ the source code instead, which is everything in `engine/src` and `games/mygame`.
 
 ---
 
-## 8. When something goes wrong
+## 9. When something goes wrong
 
 When the game crashes, the window closes and the terminal shows a **stack trace**.
 Read it from the top: the first line says what went wrong, and the first line that
@@ -414,14 +475,16 @@ mentions one of *your* files says where.
 | Things don't line up | Integer division: `7 / 2` is `3`. Use `7 / 2.0` for `3.5`. |
 | Two strings that look equal are not | Compare strings with `a.equals(b)`, never `a == b`. |
 | Animation stuck on frame one | You forgot `animation.update()` in `update()` (game objects do it for you). |
+| `is not a sound format Java understands` | The file is MP3 or OGG. Convert it to WAV (Audacity can). |
+| The game stutters when a sound plays | The sound is loaded in `update()`. Load every sound once, in `init()` or `start()`, and only `play()` it in `update()`. |
 | `Engine.setScene only works in games started with a Scene` | You started with `Engine.run(new Main(), ...)` where `Main` is a `Game`. Start with a scene instead. |
 | `Compilation failed` | The lines above it say which file and line, and what Java expected. Fix the first error first; the rest often disappear with it. |
 
 ---
 
-## 9. Inside the engine
+## 10. Inside the engine
 
-The whole engine is in `engine/src/pge`, about 3,500 lines, much of it comments. Read
+The whole engine is in `engine/src/pge`, about 4,000 lines, much of it comments. Read
 it in this order:
 
 | File | What it teaches |
@@ -438,6 +501,8 @@ it in this order:
 | `world/Camera.java` | smoothing, dead zones, limits: small formulas with a big effect |
 | `scene/Scene.java`, `GameObject.java`, `SceneRunner.java` | object-oriented design; lists that change while you loop over them; insertion sort |
 | `ui/*.java` | abstract classes and inheritance: every element is a `UIElement` |
+| `audio/Synth.java` | sound as numbers: waves, frequencies, notes as powers of two |
+| `audio/Sound.java` | the JDK's Clips; decibels; a small pool of "voices"; failing gracefully |
 
 ### One frame, from start to finish
 
@@ -452,7 +517,7 @@ pixel of it was put there by Java code you can read.
 
 ---
 
-## 10. Extending the engine
+## 11. Extending the engine
 
 The best way to understand the engine is to change it. These exercises go from
 small to big. For each: where to start, and a hint.
@@ -489,11 +554,25 @@ warnings on.
   the hero should ride on it. Hint: if the hero stands on it, move the hero by the
   same amount.
 
+### Sound
+
+- **Fading music.** Add `fadeTo(volume, updates)` to `Sound`: change the volume a
+  little every update until it gets there. Fade the music out on Game Over.
+- **Volume by distance.** A slime's sound should be quieter when it is far from the
+  hero. Compute the distance, turn it into a volume between 0 and 1.
+- **Random pitch.** The same jump sound gets tiring. Make `Synth` versions a little
+  higher or lower each time. Harder, for loaded files: play the samples faster or
+  slower by reading every 1.1th sample instead of every one (this is *resampling*).
+- **Stereo.** Sounds are mono now. Make `Sound.fromSamples` take a left and a right
+  array (2 channels), and a `pan` from -1 (left) to 1 (right).
+- **A tiny tracker.** Write music as text, one line per step, like `C4 E5 -`, and
+  turn it into samples with `Synth`, the way `MakeSounds.music()` does with arrays.
+- **Long music.** A Clip holds the whole sound in memory: fine for a minute, wasteful
+  for ten. `javax.sound.sampled.SourceDataLine` plays a sound while reading it from
+  the file, bit by bit, on its own thread.
+
 ### Bigger
 
-- **Sound.** Java can play WAV files with `javax.sound.sampled.Clip`. Make a
-  `pge.audio.Sound` class with `load(path)` and `play()`. Watch out: loading is slow,
-  so load in `start()`/`init()`, never in `update()`.
 - **Semi-transparency.** Now a pixel is either drawn or not. Keep the PNG's alpha
   (0-255) in `Bitmap`, and in `Canvas.drawBitmap` mix the colors:
   `result = (source * alpha + destination * (255 - alpha)) / 255`, for red, green and

@@ -1,5 +1,7 @@
 import pge.Engine;
 import pge.Game;
+import pge.audio.Sound;
+import pge.audio.Synth;
 import pge.gfx.Canvas;
 import pge.gfx.Color;
 import pge.input.Input;
@@ -11,7 +13,7 @@ import pge.input.Key;
  *   java Build.java mygame
  *
  * Right now it is a square you can move with the arrow keys and a score that goes
- * up when you press Space. Change anything you like: that is the point.
+ * up (with a blip) when you press Space. Change anything you like: that is the point.
  */
 public class Main implements Game {
 
@@ -21,6 +23,8 @@ public class Main implements Game {
     double playerSpeed = 2;
     int score = 0;
 
+    Sound blip;
+
     public static void main(String[] args) {
         Engine.run(new Main(), 640, 360, "My Game");
     }
@@ -28,6 +32,8 @@ public class Main implements Game {
     /** Runs once at the start. Load pictures and set things up here. */
     @Override
     public void init() {
+        // A short rising tone, made with code: square wave, from 660 Hz to 990 Hz, in 0.08 seconds.
+        blip = Sound.fromSamples(Synth.tone(Synth.SQUARE, 660, 990, 0.08, 0.3));
     }
 
     /** Runs 60 times per second. Change the state of the game here, but don't draw. */
@@ -47,6 +53,7 @@ public class Main implements Game {
         }
         if (Input.wasPressed(Key.SPACE)) {
             score = score + 1;
+            blip.play();
         }
         if (Input.wasPressed(Key.ESCAPE)) {
             Engine.stop();
