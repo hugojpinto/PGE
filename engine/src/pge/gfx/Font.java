@@ -1,11 +1,23 @@
 package pge.gfx;
 
 /**
- * A pixel font: a sprite sheet with one cell per character.
+ * A pixel font: a sprite sheet with one picture (a "glyph") for each character.
+ * Fonts made of small pictures like this are called "bitmap fonts". Early computers,
+ * terminals and game consoles all used them, because drawing letters from curves, the
+ * way modern fonts do, needed far more computing power.
  *
- * The image holds the printable ASCII characters, 32 (space) to 126 (~), in order,
- * 16 per row, plus character 127: a box that is shown for any character the font
- * does not have (for example letters with accents).
+ * WHICH CHARACTERS
+ * Computers store each character as a number. The standard list of numbers for
+ * English letters, digits and punctuation is ASCII (the American Standard Code for
+ * Information Interchange), first published in 1963. Java's char values use the same
+ * numbers for these characters, so 'A' is 65, 'a' is 97 and a space is 32.
+ *
+ * ASCII codes 0 to 31 are not letters but "control characters", left over from
+ * teleprinters: instructions such as "start a new line" or "ring the bell". So a font
+ * starts at 32, the space. The image holds the characters 32 to 126 in order, 16 per
+ * row, plus character 127 in the last place. In ASCII, 127 is "DEL" (delete), another
+ * control character, so we borrow its place for a box that is shown for any character
+ * the font does not have, such as letters with accents.
  *
  *    !"#$%&'()*+,-./
  *   0123456789:;<=>?
@@ -14,11 +26,13 @@ package pge.gfx;
  *   `abcdefghijklmno
  *   pqrstuvwxyz{|}~[box]
  *
- * Paint the letters in any opaque color on a transparent background. The color
- * does not matter: the canvas paints every visible pixel in the color you ask for.
+ * Paint the letters in any solid colour on a transparent background. The colour does
+ * not matter: the canvas draws every visible pixel in the colour you ask for.
  *
- * Letters are "proportional": an i takes less room than an m. The font measures
- * how wide each letter is when it loads, by finding its rightmost visible pixel.
+ * Letters are "proportional": an i takes less room than an m, as in printed books.
+ * (Typewriters, and the fonts programmers use for code, are "monospaced": every
+ * letter takes the same room.) The font measures how wide each letter is when it
+ * loads, by finding its rightmost visible pixel.
  *
  * The engine comes with a default 8x8 font. To use your own:
  *
@@ -52,10 +66,13 @@ public class Font {
             Bitmap glyph = sheet.get(c - FIRST_CHAR);
             glyphs[c] = glyph;
             int inkWidth = measureInkWidth(glyph);
+            // The "advance" is how far the cursor moves right after this letter. The
+            // word comes from printing, where each letter was a small block of metal
+            // and the "advance" was how far the line moved on.
             if (inkWidth == 0) {
                 advances[c] = cellWidth / 2;    // a space, or an empty cell
             } else {
-                advances[c] = inkWidth + 1;     // one pixel of space between letters
+                advances[c] = inkWidth + 1;     // the letter, plus one pixel of space before the next
             }
         }
     }
@@ -65,7 +82,11 @@ public class Font {
         return new Font(Bitmap.load(path), cellWidth, cellHeight);
     }
 
-    /** The 8x8 font that comes with PGE. Loaded the first time someone asks for it. */
+    /**
+     * The 8x8 font that comes with PGE. It is loaded the first time someone asks for it
+     * and then kept in a static field, so every canvas and label shares the same one.
+     * Waiting until something is needed before creating it is called "lazy loading".
+     */
     public static Font getDefault() {
         if (defaultFont == null) {
             defaultFont = new Font(Bitmap.loadResource("font.png"), 8, 8);
@@ -83,7 +104,11 @@ public class Font {
         return advances[toIndex(c)];
     }
 
-    /** Distance from one line of text to the next. */
+    /**
+     * Distance from one line of text to the next: the height of a letter cell plus one
+     * pixel, so the lines do not touch. (Printers call this space "leading", after the
+     * strips of lead they put between lines of metal letters.)
+     */
     public int getLineHeight() {
         return cellHeight + 1;
     }
@@ -118,6 +143,10 @@ public class Font {
         return lines * getLineHeight() - 1;
     }
 
+    /**
+     * The place of a character in the glyph arrays. A char can be used as a number in
+     * Java, so 'A' is simply 65. Characters the font does not have get the box.
+     */
     private static int toIndex(char c) {
         if (c < FIRST_CHAR || c > LAST_CHAR) {
             return MISSING_CHAR;
@@ -125,7 +154,11 @@ public class Font {
         return c;
     }
 
-    /** One more than the column of the rightmost visible pixel; 0 if the glyph is empty. */
+    /**
+     * How wide a letter really is: one more than the column of its rightmost visible
+     * pixel, or 0 if the glyph is empty. We search the columns from the right and stop
+     * at the first one that has any visible pixel in it.
+     */
     private static int measureInkWidth(Bitmap glyph) {
         for (int x = glyph.getWidth() - 1; x >= 0; x--) {
             for (int y = 0; y < glyph.getHeight(); y++) {

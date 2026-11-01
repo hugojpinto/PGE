@@ -12,8 +12,16 @@ import pge.gfx.SpriteSheet;
 /**
  * A grid of tiles: the classic way to build 2D levels.
  *
- * The map stores one number per cell. The number says which picture of the tile
- * set (a SpriteSheet) to draw there; -1 means "nothing here".
+ * Tile maps come from the game consoles of the 1980s, which had very little memory:
+ * only a few kilobytes for everything on the screen. Storing every pixel of a level
+ * was impossible. Instead, the level was cut into small squares ("tiles"), the console
+ * stored a few dozen different tile pictures, and the level itself was just a grid of
+ * numbers saying which picture goes where. A wall made of a hundred bricks needs only
+ * one brick picture. Games still use tile maps today, because they are easy to edit
+ * and fast to draw.
+ *
+ * The map stores one number per cell. The number says which picture of the tile set
+ * (a SpriteSheet) to draw there; -1 means "nothing here".
  *
  *   SpriteSheet tiles = SpriteSheet.load("assets/tiles.png", 16, 16);
  *   TileMap level = TileMap.load("assets/level1.csv", tiles);
@@ -21,14 +29,17 @@ import pge.gfx.SpriteSheet;
  * The tile size comes from the sprite sheet, so any size works (8x8, 16x16, 32x24...).
  *
  * THE CSV FORMAT
- * One line per row of the map, numbers separated by commas:
+ * CSV means "comma-separated values". It is plain text: one line per row of the map,
+ * with the numbers separated by commas. Any text editor or spreadsheet program can
+ * open it, which is why so many programs use it to exchange tables of data.
  *
  *   -1,-1,-1, 7,-1
  *   -1, 3, 3, 3,-1
  *    0, 0, 0, 0, 0
  *
- * This is the same format the free Tiled map editor (www.mapeditor.org) writes with
- * File > Export As > CSV: one file per layer, tiles numbered from 0, -1 for empty.
+ * This is the same format that the free, open-source Tiled map editor
+ * (www.mapeditor.org) writes with File > Export As > CSV: one file per layer, tiles
+ * numbered from 0, and -1 for an empty place.
  *
  * COORDINATES
  * Two kinds of positions are used here, so the method names say which one they take:
@@ -43,7 +54,13 @@ import pge.gfx.SpriteSheet;
  *
  * LAYERS
  * For scenery behind (or in front of) the playing area, use more than one map with
- * the same tile set and draw them in order: background first.
+ * the same tile set and draw them in order, background first. Each map drawn later
+ * covers the ones before it, the way a painter paints the sky first and the trees on
+ * top of it. (This is in fact called the "painter's algorithm".)
+ *
+ * HOW THE GRID IS STORED
+ * The grid is kept in a normal one-dimensional array, row by row, exactly like the
+ * pixels of a Canvas: the tile in column c and row r is at index  r * columns + c.
  */
 public class TileMap {
 
@@ -81,14 +98,15 @@ public class TileMap {
                     + "Looked for it here: " + Path.of(path).toAbsolutePath());
         }
 
-        // First turn every line into a list of numbers, skipping blank lines.
+        // Files.readAllLines reads a whole text file and gives back one String per line.
+        // Then we turn every line into an array of numbers, skipping blank lines.
         List<int[]> numberRows = new ArrayList<>();
         for (int lineIndex = 0; lineIndex < lines.size(); lineIndex++) {
             String line = lines.get(lineIndex).trim();
             if (line.isEmpty()) {
                 continue;
             }
-            String[] parts = line.split(",");
+            String[] parts = line.split(",");    // "1,2,3" becomes {"1", "2", "3"}
             int[] numbers = new int[parts.length];
             for (int i = 0; i < parts.length; i++) {
                 String part = parts[i].trim();
@@ -187,10 +205,12 @@ public class TileMap {
     // ------------------------------------------------------------------ pixels to tiles
 
     /**
-     * The column that contains world position x.
+     * The column that contains world position x: x divided by the tile width.
      *
-     * Math.floorDiv rounds down, also for negative numbers: x = -1 is in column -1
-     * (just outside the map), while plain -1 / 16 would give 0 (inside it).
+     * We use Math.floorDiv instead of the normal / operator because of negative
+     * numbers. Java's / always rounds towards zero, so -1 / 16 is 0, which would put a
+     * point just left of the map inside column 0. Math.floorDiv always rounds down, so
+     * Math.floorDiv(-1, 16) is -1: correctly outside the map.
      */
     public int columnAt(int x) {
         return Math.floorDiv(x, getTileWidth());
@@ -247,6 +267,10 @@ public class TileMap {
      * True if any part of this rectangle (in world pixels) touches a wall.
      * This is the question to ask before moving a character: "if I went there,
      * would I be inside a wall?"
+     *
+     * It works out which columns and rows the rectangle's corners are in, and checks
+     * every tile in between. A 10x13 character on 16x16 tiles touches at most 2 by 2
+     * tiles, so this is quick.
      */
     public boolean overlapsSolid(int x, int y, int width, int height) {
         int firstColumn = columnAt(x);
@@ -269,7 +293,8 @@ public class TileMap {
      * Draws the map, with its top-left corner at world position (0, 0).
      *
      * Only the tiles the camera can see are drawn: with a 640x360 screen and 16x16
-     * tiles that is about 40 x 23 = 920 tiles, however big the map is.
+     * tiles that is about 41 x 24 = 984 tiles, however big the map is. Not drawing what
+     * cannot be seen is called "culling", and every game engine does it in some form.
      */
     public void draw(Canvas canvas) {
         int tileWidth = getTileWidth();

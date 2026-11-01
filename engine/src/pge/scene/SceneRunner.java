@@ -5,11 +5,23 @@ import pge.Game;
 import pge.gfx.Canvas;
 
 /**
- * Runs scenes using the plain Game interface: it is the bridge between the two ways
- * of making a game with PGE. Engine.run(scene, ...) wraps your scene in one of these.
+ * Runs scenes through the plain Game interface. It connects the two ways of making a
+ * game with PGE: Engine.run(scene, ...) wraps your scene in one of these.
  *
- * It shows that scenes are not magic: they are a Game like any other, whose
- * update() and draw() happen to update and draw a list of objects.
+ * The engine only knows how to run a Game. A Scene is not a Game: it has different
+ * methods (start, runUpdate, runDraw). This class is a Game whose init(), update() and
+ * draw() simply call the current scene's methods. So, to the engine, a game made of
+ * scenes is a Game like any other, and the engine did not need to change at all to
+ * support scenes.
+ *
+ * A class that lets one kind of object be used where another kind is expected is
+ * called an "adapter", like a travel plug adapter that lets a plug fit a foreign
+ * socket. It is one of the design patterns described in the book "Design Patterns"
+ * (1994) by Gamma, Helm, Johnson and Vlissides, one of the best-known books about
+ * object-oriented programming.
+ *
+ * It also takes care of switching scenes, which only ever happens between updates,
+ * never in the middle of one.
  */
 public class SceneRunner implements Game {
 
@@ -22,7 +34,11 @@ public class SceneRunner implements Game {
         current = firstScene;
     }
 
-    /** Asks to switch to another scene. The switch happens at the start of the next update. */
+    /**
+     * Asks to switch to another scene. The switch happens at the start of the next
+     * update. If we switched straight away, the rest of the current update would run
+     * half in the old scene and half in the new one.
+     */
     public void changeScene(Scene scene) {
         next = scene;
     }
@@ -54,6 +70,7 @@ public class SceneRunner implements Game {
         current.runDraw(canvas);
     }
 
+    /** Prepares a scene, calls its start(), and lets the objects it added join straight away. */
     private void begin(Scene scene) {
         scene.setUp(width, height);
         scene.start();

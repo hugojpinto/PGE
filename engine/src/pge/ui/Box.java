@@ -9,8 +9,8 @@ import pge.gfx.Color;
  *   Box panel = new Box(10, 10, 200, 80);
  *   panel.setFillColor(Color.DARK_BLUE);
  *
- * Use Color.TRANSPARENT as the fill color for a frame only, or as the border color
- * for no border.
+ * Use Color.TRANSPARENT as the fill colour for a frame only, or as the border colour
+ * for no border. (Drawing methods skip the colour TRANSPARENT; see Color.java.)
  */
 public class Box extends UIElement {
 

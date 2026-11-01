@@ -8,44 +8,53 @@ import pge.scene.Scene;
 import pge.scene.SceneRunner;
 
 /**
- * Starts and runs a game.
+ * Starts a game and keeps it running.
  *
  *   public static void main(String[] args) {
  *       Engine.run(new MyGame(), 640, 360);
  *   }
  *
- * MyGame can be a Game (you write update() and draw() yourself) or a Scene (you
- * add objects and the scene updates and draws them). Games made of scenes switch
- * between screens with Engine.setScene(new OtherScene()).
+ * MyGame can be a Game, where you write update() and draw() yourself, or a Scene,
+ * where you add objects and the scene updates and draws them. A game made of scenes
+ * changes screens with Engine.setScene(new OtherScene()).
  *
  * The width and height are the size of the game's picture in pixels, not the size of
- * the window. The window is a whole-number multiple of it (640x360 becomes 1920x1080
- * at 3x), so the pixels stay crisp at any window size.
+ * the window. The window shows the picture made bigger by a whole number (640x360
+ * becomes 1920x1080 at 3 times), so every game pixel stays a sharp square.
  *
- * Built-in keys, available in every game:
- *   F11, or Alt+Enter (Option+Enter on a Mac)   toggle fullscreen
- *   F3                                           show speed statistics on screen
+ * Keys that work in every game:
+ *   F11, or Alt+Enter (Option+Enter on a Mac)   switch fullscreen on or off
+ *   F3                                           show how long each frame takes
  *
  * THE GAME LOOP
- * The heart of every game engine. Ours runs update() exactly 60 times per second,
- * whatever the speed of the computer, and draws after each round of updates:
+ * Every game engine has a loop at its centre that runs until the game ends. Each time
+ * round, it reads the input, moves the game forward and draws a new picture. Ours
+ * calls update() exactly 60 times per second, however fast the computer is:
  *
  *   repeat until the window closes:
  *       wait until the next update is due
- *       Input.update(), then game.update()   (more than once if we fell behind)
+ *       Input.update(), then game.update()   (several times, if we have fallen behind)
  *       game.draw(canvas), then show the canvas in the window
  *
- * Because the update rate never changes, "x = x + 2" always means "2 pixels per
- * update" on every computer. No time calculations needed.
+ * This is called a "fixed time step". Many early games simply ran as fast as the
+ * computer allowed, which is why some old PC games became unplayably fast on newer
+ * machines. Other engines measure the time since the last update (the "delta time")
+ * and multiply every speed by it. A fixed step is simpler: "x = x + 2" always means
+ * 2 pixels per update on every computer, and a jump is always the same height.
+ * Pico-8 works this way too. The technique of running fixed steps while drawing
+ * whenever possible is described in Glenn Fiedler's well-known article
+ * "Fix Your Timestep!" (2004).
  */
 public final class Engine {
 
     public static final int UPDATES_PER_SECOND = 60;
 
+    // System.nanoTime() counts in nanoseconds: a billion of them per second.
     private static final long NANOS_PER_SECOND = 1000000000L;
     private static final long NANOS_PER_UPDATE = NANOS_PER_SECOND / UPDATES_PER_SECOND;
-    // If the computer falls far behind (say, it froze for a second), don't try to catch
-    // up with dozens of updates at once. A few, then carry on from "now".
+    // If the computer falls far behind (for example, it froze for a second), we do not
+    // try to catch up with dozens of updates at once: the game would appear to jump
+    // forward. We run a few, then carry on from "now".
     private static final int MAX_UPDATES_PER_FRAME = 5;
 
     private static Window window;
@@ -55,12 +64,13 @@ public final class Engine {
     private static boolean running = false;
     private static long updateCount = 0;
 
-    // Statistics (F3), measured over the last second.
+    // The F3 statistics, measured over the last second.
     private static boolean showStats = false;
     private static int framesPerSecond = 0;
     private static double updateMillis = 0;
     private static double drawMillis = 0;
 
+    /** Nobody needs an Engine object: everything here is static, because there is only one game. */
     private Engine() {
     }
 
@@ -82,17 +92,21 @@ public final class Engine {
 
         title = windowTitle;
         window = new Window(title, width, height);
+        // The canvas draws straight into the window's picture: they share one array.
         canvas = new Canvas(width, height, window.getPixels());
 
         try {
             game.init();
             loop(game);
         } catch (Throwable problem) {
-            // Something in the game crashed. Close the window instead of leaving it
-            // frozen on screen, then show what went wrong.
+            // Throwable catches every kind of error, even serious ones like running out
+            // of memory or a StackOverflowError. Normally you should not catch those,
+            // but here we only want to close the window properly before the program
+            // ends; otherwise it would stay on the screen, frozen. Then we print the
+            // error so the programmer can see what went wrong.
             window.close();
             problem.printStackTrace();
-            System.exit(1);
+            System.exit(1);    // an exit code other than 0 tells the terminal something went wrong
         }
         window.close();
         System.exit(0);
@@ -103,13 +117,16 @@ public final class Engine {
         run(firstScene, width, height, "PGE");
     }
 
-    /** Runs a game made of scenes, starting with this one. */
+    /**
+     * Runs a game made of scenes, starting with this one. The scene is wrapped in a
+     * SceneRunner, which is a Game, so from here on it runs like any other game.
+     */
     public static void run(Scene firstScene, int width, int height, String windowTitle) {
         sceneRunner = new SceneRunner(firstScene);
         run(sceneRunner, width, height, windowTitle);
     }
 
-    /** Switches to another scene, at the start of the next update. */
+    /** Switches to another scene. The switch happens at the start of the next update. */
     public static void setScene(Scene scene) {
         if (sceneRunner == null) {
             throw new IllegalStateException("Engine.setScene only works in games started with a Scene: "
@@ -168,6 +185,17 @@ public final class Engine {
 
     // ------------------------------------------------------------------ the loop
 
+    /**
+     * The game loop itself. nextUpdate is the moment, in nanoseconds, when the next
+     * update should run. Each update moves it forward by exactly 1/60 of a second, so
+     * small delays even out: if one update starts a little late, the next one is
+     * simply due a little sooner.
+     *
+     * We use System.nanoTime() rather than System.currentTimeMillis(). The second one
+     * is the computer's clock, which can jump when it is corrected over the internet
+     * or changed by hand. nanoTime only ever moves forward, which is what measuring
+     * short times needs.
+     */
     private static void loop(Game game) {
         running = true;
         long nextUpdate = System.nanoTime();
@@ -201,7 +229,7 @@ public final class Engine {
                 updatesThisFrame = updatesThisFrame + 1;
             }
             if (now >= nextUpdate) {
-                nextUpdate = now + NANOS_PER_UPDATE;   // too far behind: skip ahead
+                nextUpdate = now + NANOS_PER_UPDATE;   // too far behind: give up catching up
             }
 
             // 2. Draw. Every frame starts without a camera offset.
@@ -215,7 +243,7 @@ public final class Engine {
             drawNanos = drawNanos + (System.nanoTime() - drawStart);
             frames = frames + 1;
 
-            // 3. Once per second, update the statistics.
+            // 3. Once per second, work out the statistics for the F3 overlay.
             if (System.nanoTime() - statsStart >= NANOS_PER_SECOND) {
                 framesPerSecond = frames;
                 updateMillis = updateNanos / 1000000.0 / Math.max(updates, 1);
@@ -241,8 +269,10 @@ public final class Engine {
     }
 
     /**
-     * The F3 overlay, in the top-right corner. One frame at 60 fps may take 16.7 ms
-     * in total; "update" and "draw" show how much of that the game is using.
+     * The F3 overlay, in the top-right corner. At 60 frames per second, each frame has
+     * 1000 / 60 = 16.7 milliseconds in total. "update" and "draw" show how much of that
+     * the game is using. If the two together get close to 16.7, the game will start to
+     * slow down.
      */
     private static void drawStats() {
         String text = String.format("%d FPS\nupdate %.2f ms\ndraw   %.2f ms",
@@ -258,8 +288,14 @@ public final class Engine {
     }
 
     /**
-     * Waits until the next update is due. Thread.sleep is not very precise, so we sleep
-     * for most of the time and then briefly yield until the moment arrives.
+     * Waits until the next update is due.
+     *
+     * Thread.sleep(n) asks the operating system to wake us up after n milliseconds. The
+     * operating system shares the processor between many programs in small time
+     * slices, so it often wakes us up a little late, sometimes by more than a
+     * millisecond. To be on time, we sleep for all but the last millisecond. When less
+     * than that is left, we call Thread.yield(), which only gives other programs a
+     * quick turn, and then the loop checks the clock again.
      */
     private static void waitFor(long nanos) {
         long millis = nanos / 1000000;
@@ -267,6 +303,8 @@ public final class Engine {
             try {
                 Thread.sleep(millis - 1);
             } catch (InterruptedException e) {
+                // Another thread asked this one to stop waiting. Nothing in PGE does that,
+                // so if it happens, the safest thing is to end the game.
                 running = false;
             }
         } else {

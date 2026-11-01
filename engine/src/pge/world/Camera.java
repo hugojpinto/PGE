@@ -23,18 +23,25 @@ import pge.gfx.Canvas;
  *
  * LIMITS
  * With setLimits, the camera never shows anything outside the world: near an edge
- * it stops, and the hero walks off-center instead. If the world is smaller than the
- * screen, it is centered.
+ * it stops, and the hero walks off-centre instead. If the world is smaller than the
+ * screen, it is centred.
  *
  * SMOOTHNESS
  * By default follow() jumps straight to its target. setSmoothness(0.1) makes it
- * glide there instead, closing 10% of the distance every update. Lower is softer.
+ * glide there instead, closing 10% of the remaining distance every update. Lower is
+ * softer.
  *
  * DEAD ZONE
  * setDeadZone(40, 120) gives the middle of the screen a 40x120 box in which the
  * target may move without the camera moving at all. The camera only follows once
  * the target pushes against an edge of the box. A tall dead zone stops the whole
  * world from bobbing up and down every time a platformer hero jumps.
+ *
+ * Side-scrolling games have used tricks like these since the 1980s; Super Mario Bros.
+ * (1985), for example, only scrolls when Mario gets past the middle of the screen. If
+ * you want to learn more, the game developer Itay Keren collected dozens of these
+ * techniques from classic games in a well-known talk and article, "Scroll Back: The
+ * Theory and Practice of Cameras in Side-Scrollers" (2015).
  */
 public class Camera {
 
@@ -62,7 +69,14 @@ public class Camera {
 
     /**
      * Moves toward having world point (targetX, targetY) in the middle of the screen,
-     * or, with a dead zone, just inside the dead zone.
+     * or, with a dead zone, just inside the dead zone. Call it once in every update.
+     *
+     * The smoothing line, position + (wanted - position) * smoothness, moves the camera
+     * a fixed fraction of the remaining distance. Far from the target, that is a big
+     * step; close to it, a tiny one. So the camera starts quickly and slows down
+     * gently as it arrives. Moving a fraction of the way from one value to another is
+     * called "linear interpolation", or "lerp" for short, and doing it every update like
+     * this is one of the most common tricks in game programming.
      */
     public void follow(double targetX, double targetY) {
         double wantedX = wantedPosition(x, targetX, viewWidth, deadZoneWidth);
@@ -73,11 +87,14 @@ public class Camera {
     }
 
     /**
-     * Where the camera should be along one axis (x or y). The dead zone is centered
-     * on the screen and reaches deadZoneSize / 2 to each side of the middle. If the
-     * target is inside it, stay put. If it is outside, move just enough to bring the
-     * target back to the edge of the dead zone. With no dead zone, that means
-     * "put the target exactly in the middle".
+     * Where the camera should be along one axis (x or y). The dead zone is centred on
+     * the screen and reaches deadZoneSize / 2 to each side of the middle. If the target
+     * is inside it, stay put. If it is outside, move just enough to bring the target
+     * back to the edge of the dead zone. With no dead zone (size 0), that means "put
+     * the target exactly in the middle".
+     *
+     * This method is "static" because it only uses its parameters, not the fields of
+     * a camera, and it is called once for x and once for y.
      */
     private static double wantedPosition(double position, double target, int viewSize, int deadZoneSize) {
         double middle = position + viewSize / 2.0;

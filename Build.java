@@ -28,6 +28,18 @@ import javax.tools.ToolProvider;
  * Each game is a folder in games/ with a Main.java (the class with main) and,
  * optionally, an assets/ folder. Games run with their own folder as the working
  * directory, so they can load files as "assets/hero.png".
+ *
+ * HOW THIS FILE RUNS
+ * Since Java 11, "java SomeFile.java" compiles a single source file in memory and runs
+ * it straight away, without a separate javac step. That is how this build script can
+ * be started without being built first.
+ *
+ * WHY NOT MAVEN OR GRADLE?
+ * Big Java projects use build tools such as Maven or Gradle. They download libraries,
+ * run tests and much more, but they are large programs with their own configuration
+ * languages to learn. PGE has no libraries to download, so all it needs is to call the
+ * Java compiler on the right files in the right order, and that fits in this one file
+ * of ordinary Java that you can read.
  */
 public class Build {
 
@@ -65,7 +77,21 @@ public class Build {
         }
     }
 
-    /** Compiles every .java file under sourceFolder into outputFolder. */
+    /**
+     * Compiles every .java file under sourceFolder into outputFolder.
+     *
+     * This does the same as typing the javac command in a terminal, but from inside a
+     * Java program: ToolProvider.getSystemJavaCompiler() gives us the compiler that
+     * comes with the JDK (Java has offered this since version 6), and compiler.run(...)
+     * takes the same options javac would. The options we use:
+     *   --release 25    compile for Java 25, and complain if the code uses anything newer
+     *   -Xlint:...      switch on extra warnings ("lint" is an old name for tools that
+     *                   look for suspicious code, after the fluff that collects on clothes)
+     *   -encoding UTF-8 read the source files as UTF-8 text, so letters like é work
+     *   -d folder       where to write the compiled .class files
+     *   -cp folder      where to find classes this code uses (the "class path"); games
+     *                   need the compiled engine
+     */
     static void compile(File sourceFolder, String classPath, File outputFolder) {
         List<String> sources = new ArrayList<>();
         findFiles(sourceFolder, ".java", sources);
@@ -80,8 +106,11 @@ public class Build {
         if (classPath == null) {
             arguments.add("-Xlint:all");     // the engine: every warning
         } else {
-            // Games: every warning except "this-escape", which complains about calling
-            // methods like setName(...) in a constructor. That is fine in game code.
+            // Games: every warning except "this-escape". It warns when a constructor calls
+            // a method such as setName(...) that a subclass could override, because the
+            // subclass's version would run before the subclass's own fields are set up.
+            // That only matters for classes that others will extend, so it is fine to
+            // switch it off for game code, where beginners naturally write this way.
             arguments.add("-Xlint:all,-this-escape");
         }
         arguments.add("-encoding");
@@ -101,7 +130,14 @@ public class Build {
         }
     }
 
-    /** Starts a game in its own Java process and waits for it to finish. */
+    /**
+     * Starts a game in its own Java process and waits for it to finish.
+     *
+     * A "process" is a running program. ProcessBuilder starts a new one, here a second
+     * copy of Java that runs the game. We set its working folder to the game's folder,
+     * so "assets/hero.png" means that game's assets, and inheritIO() lets the game print
+     * to the same terminal as this script.
+     */
     static void run(String gameName) throws IOException, InterruptedException {
         File gameFolder = new File("games/" + gameName);
         if (!new File("out/games/" + gameName + "/Main.class").isFile()) {
@@ -137,7 +173,9 @@ public class Build {
         deleteFolder(distFolder);
         distFolder.mkdirs();
 
-        // A .jar is a zip file with a "manifest" inside that says which class has main().
+        // A .jar ("Java ARchive") is an ordinary zip file with a special file inside,
+        // META-INF/MANIFEST.MF, called the "manifest". Its Main-Class line tells
+        // "java -jar game.jar" which class has the main method to start.
         Manifest manifest = new Manifest();
         manifest.getMainAttributes().put(Attributes.Name.MANIFEST_VERSION, "1.0");
         manifest.getMainAttributes().put(Attributes.Name.MAIN_CLASS, "Main");
@@ -187,7 +225,9 @@ public class Build {
             return;
         }
         for (File child : children) {
-            // Zip files always use "/" between folder names, on every system.
+            // Zip files always use "/" between folder names, even on Windows, where file
+            // paths normally use "\". The zip format dates from 1989 (Phil Katz's PKZIP)
+            // and is the same on every system.
             String name = prefix + child.getName();
             if (child.isDirectory()) {
                 addToZip(zip, child, name + "/");
@@ -218,7 +258,15 @@ public class Build {
         }
     }
 
-    /** Adds every file under folder whose name ends with the given ending. */
+    /**
+     * Adds every file under folder whose name ends with the given ending, including
+     * files in folders inside it, and in folders inside those.
+     *
+     * The method calls itself for each folder it finds. A method that calls itself is
+     * "recursive". It is the natural way to walk through folders, because a folder can
+     * contain folders, which can contain folders, to any depth. It stops when a folder
+     * has no more folders inside.
+     */
     static void findFiles(File folder, String ending, List<String> found) {
         File[] children = folder.listFiles();
         if (children == null) {
@@ -233,7 +281,11 @@ public class Build {
         }
     }
 
-    /** Copies non-.java files (images, fonts...) next to the compiled classes. */
+    /**
+     * Copies files that are not .java files (like the font picture) next to the
+     * compiled classes, so the engine can find them on the class path. This is recursive
+     * too, like findFiles.
+     */
     static void copyResources(File sourceFolder, File outputFolder) throws IOException {
         File[] children = sourceFolder.listFiles();
         if (children == null) {
@@ -250,6 +302,10 @@ public class Build {
         }
     }
 
+    /**
+     * Deletes a folder and everything in it. Java can only delete a folder that is
+     * empty, so we first delete what is inside it (recursively), then the folder.
+     */
     static void deleteFolder(File folder) {
         File[] children = folder.listFiles();
         if (children != null) {

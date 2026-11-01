@@ -6,7 +6,14 @@ import java.awt.event.KeyEvent;
  * Names for keyboard keys, to use with Input.isDown(...), Input.wasPressed(...) and
  * Input.wasReleased(...).
  *
- * Each name is just a number: the code the JDK uses for that key.
+ * Each name is just a number: the code Java uses for that key. Java calls these
+ * "virtual key codes", and they are named KeyEvent.VK_ followed by the key (VK_LEFT,
+ * VK_A...). Windows, macOS and Linux each number their keys differently. Java
+ * translates their numbers into its own, so the same code means the same key on
+ * every operating system, and a game works everywhere without changes.
+ *
+ * This class only gives them shorter names, so games can write Key.LEFT instead of
+ * KeyEvent.VK_LEFT and do not need to know about KeyEvent.
  */
 public final class Key {
 
@@ -54,7 +61,8 @@ public final class Key {
     public static final int Y = KeyEvent.VK_Y;
     public static final int Z = KeyEvent.VK_Z;
 
-    // Number keys on the main keyboard (Java names cannot start with a digit)
+    // Number keys on the main keyboard. They are called DIGIT_0 and so on because a
+    // name in Java may not start with a digit.
     public static final int DIGIT_0 = KeyEvent.VK_0;
     public static final int DIGIT_1 = KeyEvent.VK_1;
     public static final int DIGIT_2 = KeyEvent.VK_2;

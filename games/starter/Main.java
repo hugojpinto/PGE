@@ -13,11 +13,13 @@ import pge.input.Key;
  *   java Build.java mygame
  *
  * Right now it is a square you can move with the arrow keys and a score that goes
- * up (with a blip) when you press Space. Change anything you like: that is the point.
+ * up (with a blip) when you press Space. Change anything you like, run it again, and
+ * see what happens. That is the quickest way to learn how it works.
  */
 public class Main implements Game {
 
-    // The state of the game: everything that can change while playing.
+    // The "state" of the game: everything that can change while playing. update()
+    // changes these fields and draw() shows them.
     double playerX = 312;
     double playerY = 172;
     double playerSpeed = 2;

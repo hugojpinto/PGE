@@ -19,7 +19,9 @@ public class MakeSounds {
     static final String FOLDER = "games/platformer-scenes/assets/sounds/";
 
     public static void main(String[] args) {
-        // Jump: a quick rising "bwoop"
+        // Jump: a quick rising "bwoop". A pitch that goes up sounds like moving up, so
+        // games have used rising sounds for jumps since the arcade days. Falling pitches
+        // (below) sound like falling, failing or getting hurt.
         save("jump", Synth.tone(Synth.SQUARE, 260, 620, 0.16, 0.35));
 
         // Coin: two high notes, the second one longer
@@ -40,7 +42,9 @@ public class MakeSounds {
         // Click: a tiny tick for menu buttons
         save("click", Synth.tone(Synth.SQUARE, 1300, 1000, 0.04, 0.25));
 
-        // Win: a rising arpeggio, C major
+        // Win: a rising arpeggio in C major. An arpeggio plays the notes of a chord one
+        // after another instead of together; the word comes from the Italian for
+        // "playing the harp".
         save("win", arpeggio(new String[] { "C5", "E5", "G5", "C6" }, 0.11, 0.45));
 
         // Game over: a falling one
@@ -64,21 +68,30 @@ public class MakeSounds {
 
     // ===================================================================== MUSIC
     //
-    // Eight bars, four chords repeated twice: C, A minor, F, G. Each bar has eight
-    // steps (eighth notes). Three instruments play together:
+    // Eight bars, four chords repeated twice: C, A minor, F, G. This order of chords is
+    // one of the most used in pop music; it was so common in 1950s songs that it is
+    // often called the "fifties progression". Each bar has eight steps (eighth notes).
+    // Three instruments play together:
     //   bass    triangle wave, jumping between the chord's root and its octave
     //   melody  square wave; "-" means rest
-    //   hi-hat  a tick of noise on every second step
+    //   hi-hat  a tick of noise on every second step. Old consoles had no real drums,
+    //           so short bursts of noise played the part of the cymbals and snare.
     //
     // The track is built by starting with silence and adding every note at its
     // moment, like writing notes on a page.
 
+    // The speed of music is counted in beats per minute (BPM), like a heartbeat. At 140
+    // BPM, one beat lasts 60 / 140 seconds, about 0.43. An eighth note is half a beat.
     static final double BEATS_PER_MINUTE = 140;
     static final double STEP = 60.0 / BEATS_PER_MINUTE / 2;    // one eighth note, in seconds
+
+    // Each bar's bass notes: the chord's root (the note the chord is named after), low
+    // down, and the same note one octave higher.
 
     static final String[] BASS_ROOTS = { "C2", "A1", "F1", "G1", "C2", "A1", "F1", "G1" };
     static final String[] BASS_OCTAVES = { "C3", "A2", "F2", "G2", "C3", "A2", "F2", "G2" };
 
+    // A two-dimensional array: one row per bar, one note (or "-" for a rest) per step.
     static final String[][] MELODY = {
         { "E5", "-", "G5", "-", "C6", "-", "G5", "-" },
         { "A5", "-", "E5", "-", "C5", "-", "E5", "-" },

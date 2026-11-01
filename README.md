@@ -1,18 +1,23 @@
 # PGE: Pinto's Game Engine
 
-A small 2D game engine in plain Java, written to be read.
+PGE is a small engine for making 2D games in Java. It was written for a first-year
+programming course, so the code is meant to be easy to read.
 
-- **No dependencies.** Only the JDK.
-- **No magic.** The engine draws every pixel itself into an `int[]` array. The JDK only
-  opens a window, reports key presses, and shows the finished picture once per frame.
-- **Two ways to make a game.**
-  - **Pico-8 style:** implement `init()`, `update()` and `draw()` from the `Game`
-    interface, and the engine calls them for you, 60 times a second.
-  - **Unity style:** build `Scene`s out of `GameObject`s, tile maps and UI elements,
-    and the scene updates and draws all of them for you.
+- It needs nothing except Java 25. There are no extra libraries to install.
+- The engine draws every pixel itself, by writing colours into an `int[]` array.
+  Java is only used to open the window, read the keyboard and mouse, play sound, and
+  put the finished picture on the screen.
+- There are two ways to make a game:
+  - Implement the `Game` interface. You write `init()`, `update()` and `draw()`, and
+    the engine calls them 60 times a second. This is how pico-8 games work.
+  - Build `Scene`s out of `GameObject`s, tile maps and buttons. The scene updates
+    and draws everything for you. This is closer to how Unity works.
 
-**New here? Read the [PGE Guide](docs/GUIDE.md)**: your first game, how everything
-works, and ideas for extending the engine.
+If you are new to PGE, start with the [PGE Guide](docs/GUIDE.md)
+([PDF](docs/GUIDE.pdf)). It takes you through your first game, explains how
+everything works, and has ideas for extending the engine. If you want to change the
+engine itself, read [PGE Architecture](docs/ARCHITECTURE.md)
+([PDF](docs/ARCHITECTURE.pdf)).
 
 ## Requirements
 
@@ -213,7 +218,9 @@ games/demo/             top-down demo: sprites, animation, text, camera, mouse, 
 games/platformer/       platformer with the Game interface: tile maps, gravity, wall collisions
 games/platformer-scenes/  the same platformer with scenes: menu, enemies, hearts, sound and music
 games/starter/          a minimal game to copy when starting a new one
-docs/GUIDE.md           the guide
+docs/GUIDE.md           the guide, for making games (and GUIDE.pdf)
+docs/ARCHITECTURE.md    how the engine is built and why (and ARCHITECTURE.pdf)
+tools/make-pdfs.sh      remakes the PDFs from the Markdown (needs pandoc and Chrome or Brave)
 tools/MakeAssets.java   draws the built-in art and the platformer level with code
 tools/MakeSounds.java   makes the platformer's sounds and music with Synth
 ```

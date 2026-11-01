@@ -2,8 +2,13 @@ import pge.gfx.Canvas;
 import pge.gfx.Color;
 
 /**
- * The sky and the hills behind the level. Every scene uses the same background,
- * so it lives here, in one place.
+ * The sky and the hills behind the level. Every scene uses the same background, so it
+ * lives here, in one place, instead of being copied into each scene. If it needs to
+ * change, it only changes here.
+ *
+ * Everything in this class is static: it holds no data of its own, so there is no
+ * need to create a Scenery object. Scenes just call Scenery.draw(...). The hills use
+ * the parallax trick explained in games/platformer/Main.java (drawHills).
  */
 public class Scenery {
 

@@ -10,7 +10,8 @@ import pge.world.TileMap;
  * The player. Runs, jumps, stops at walls, stomps slimes, and gets hurt by them.
  *
  * Compare with games/platformer/Main.java: the movement code is the same, but here
- * it lives in the hero itself instead of in the game.
+ * it lives in the hero itself instead of in the game. The comments there explain the
+ * physics (speeds, gravity, the short jump) and why the hero moves one pixel at a time.
  */
 public class Hero extends GameObject {
 
@@ -94,11 +95,22 @@ public class Hero extends GameObject {
                 setSprite(jumping);
             }
         }
-        // Blink while safe after being hurt: visible for 4 updates, hidden for 4...
+        // Blink while safe after being hurt: visible for 4 updates, hidden for 4, and so
+        // on. (safeTimer / 4) % 2 is 0 or 1, and switches every 4 updates. Games have
+        // used a short time of safety after a hit, shown by blinking, since the arcade
+        // days. Without it, touching an enemy would take away all your hearts in a
+        // fraction of a second. Players call these "invincibility frames".
         setVisible(safeTimer == 0 || (safeTimer / 4) % 2 == 0);
     }
 
-    /** Landing on top of a slime squashes it. Touching it any other way hurts. */
+    /**
+     * Landing on top of a slime squashes it. Touching it any other way hurts. Jumping
+     * on enemies to defeat them is another idea Super Mario Bros. (1985) made famous.
+     *
+     * How do we know the hero landed on top? Two things must be true: the hero is
+     * falling (speedY > 0, because down is positive), and the bottom of the hero is no
+     * lower than the middle of the slime. Otherwise the hero walked into its side.
+     */
     private void touchSlime(GameObject slime) {
         int myBottom = getHitboxY() + getHitboxHeight();
         int slimeMiddle = slime.getHitboxY() + slime.getHitboxHeight() / 2;

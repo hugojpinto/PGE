@@ -11,11 +11,21 @@ package pge.gfx;
  *   // in draw():
  *   canvas.drawBitmap(walk.getFrame(), x, y);
  *
- * At 60 updates per second, 8 updates per frame means 7.5 frames per second.
- * Smaller numbers make the animation faster.
+ * At 60 updates per second, 8 updates per frame means 60 / 8 = 7.5 pictures per
+ * second. Smaller numbers make the animation faster. Pixel art animations are usually
+ * slow like this, with only a few frames: a walk often has just 4. Our eyes fill in
+ * the movement between them. Cartoons work the same way; hand-drawn animation often
+ * shows each drawing for two or three film frames.
  *
  * By default an animation loops forever. Call setLooping(false) for one that plays
  * once and stops on its last frame (an explosion, for example), then use isFinished().
+ *
+ * HOW IT WORKS
+ * The animation does not measure time. It counts how many times update() was called,
+ * and works out the frame from that count (see getFrameIndex). Because the engine
+ * calls update() exactly 60 times per second, counting updates is the same as
+ * measuring time, and it stays in step with the rest of the game even if the
+ * computer is slow.
  */
 public class Animation {
 
@@ -47,7 +57,14 @@ public class Animation {
         return frames[getFrameIndex()];
     }
 
-    /** The number (0, 1, 2...) of the frame to draw right now. */
+    /**
+     * The number (0, 1, 2...) of the frame to draw right now.
+     *
+     * Integer division does the work. With 8 updates per frame, updates 0 to 7 give
+     * frame 0, updates 8 to 15 give frame 1, and so on. For a looping animation, the
+     * remainder operator % wraps the number around: with 4 frames, frame 4 becomes 0
+     * again, frame 5 becomes 1, and so on. A non-looping animation stays on its last frame.
+     */
     public int getFrameIndex() {
         int index = updates / updatesPerFrame;
         if (looping) {

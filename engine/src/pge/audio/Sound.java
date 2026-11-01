@@ -27,28 +27,40 @@ import javax.sound.sampled.UnsupportedAudioFileException;
  * Sounds can also be made with code instead of loaded from a file; see Synth.
  *
  * FILES
- * Java can read WAV files (and AIFF and AU) out of the box, but not MP3 or OGG.
- * Free tools like jsfxr (https://sfxr.me) make retro sound effects as WAV files, and
- * Audacity can convert other formats to WAV.
+ * Java can read WAV files out of the box (and two older formats, AIFF from Apple and
+ * AU from Sun), but not MP3 or OGG, which need extra libraries. WAV was created by
+ * Microsoft and IBM in 1991 and is still the most common format for sound effects,
+ * because it stores the sound exactly, without compression. The free web tool jsfxr
+ * (https://sfxr.me), a browser version of the 2007 sound effect maker sfxr, makes
+ * retro sound effects as WAV files, and Audacity can convert other formats to WAV.
  *
  * HOW SOUND WORKS
- * A sound is a list of numbers, like a picture is. Each number says how far the
- * speaker should be pushed out or pulled in at one moment; thousands of them per
- * second make the speaker vibrate, and vibrations are what we hear. Our sounds have
- * 22,050 numbers ("samples") per second.
+ * Sound is air vibrating. A speaker makes it by pushing its cone out and pulling it
+ * in, very quickly. A digital sound is a list of numbers, one for each moment, saying
+ * how far out or in the cone should be. Each number is called a "sample", and how many
+ * there are per second is the "sample rate". Storing sound like this is called PCM,
+ * "pulse-code modulation", invented by the engineer Alec Reeves in 1937 for sending
+ * telephone calls. A music CD uses 44,100 samples per second; our sounds use half
+ * that, 22,050, which is plenty for retro sound effects and keeps the files small.
  *
- * The JDK plays sounds with a Clip: a sound loaded into memory that can be started,
- * stopped and rewound. A Clip can only play once at a time, so each Sound keeps a few
- * ("voices"). That way, collecting three coins quickly plays three overlapping
- * sounds instead of cutting the first one off.
+ * So a sound is a list of numbers, just as a picture is. In memory, each sample is a
+ * 16-bit number (from -32768 to 32767), the same size as on a CD.
+ *
+ * Java plays sounds with a Clip: a sound loaded into memory that can be started,
+ * stopped and rewound, like a short tape. (Clip is part of the Java Sound API, in Java
+ * since version 1.3.) A Clip can only play once at a time, so each Sound keeps a few
+ * of them. Synthesizers call the number of notes they can play at once their
+ * "voices", and we borrow the word. With four voices, collecting three coins quickly
+ * plays three overlapping sounds instead of cutting the first one off.
  *
  * NO SOUND DEVICE?
  * If the computer has no working sound output, PGE prints one warning and the game
- * runs silently. A game should never crash because the speakers are missing.
+ * runs without sound. Sound is nice to have, but the game should still work: school
+ * computers and virtual machines often have no sound device at all.
  */
 public class Sound {
 
-    /** How many copies of the same sound can play at once. */
+    /** How many copies of the same sound can play at once (see "voices" above). */
     private static final int VOICES = 4;
 
     private static double masterVolume = 1.0;
@@ -72,8 +84,10 @@ public class Sound {
         }
         try {
             AudioInputStream stream = AudioSystem.getAudioInputStream(file);
-            // Turn whatever the file holds into plain 16-bit numbers, the format every
-            // sound device understands.
+            // WAV files can store samples in several ways: 8 or 16 bits, different
+            // sample rates, mono or stereo. We ask Java to convert whatever the file
+            // holds into plain 16-bit samples, a format every sound device accepts,
+            // and keep its sample rate and number of channels.
             AudioFormat source = stream.getFormat();
             AudioFormat plain = new AudioFormat(source.getSampleRate(), 16, source.getChannels(), true, false);
             AudioInputStream converted = AudioSystem.getAudioInputStream(plain, stream);
@@ -95,8 +109,17 @@ public class Sound {
      * second. Synth makes these for you; you can also compute your own.
      */
     public static Sound fromSamples(float[] samples) {
-        // Each sample becomes a 16-bit whole number (-32767 to 32767), stored as two
-        // bytes, the low byte first ("little-endian").
+        // Each sample becomes a 16-bit whole number (-32767 to 32767), which takes two
+        // bytes. Computers disagree about which of the two bytes to store first. WAV
+        // files, and Intel and ARM processors, put the low byte first, which is called
+        // "little-endian". The names come from Gulliver's Travels (1726), where two
+        // nations go to war over which end of a boiled egg to crack; the computer
+        // scientist Danny Cohen borrowed them in 1980 for this argument among
+        // computer makers.
+        //
+        // "& 0xFF" keeps the lowest 8 bits, which is the low byte; ">> 8" moves the
+        // high byte down so the same trick picks it out. (See Color.java for more about
+        // these bit operations.)
         byte[] bytes = new byte[samples.length * 2];
         for (int i = 0; i < samples.length; i++) {
             float sample = Math.max(-1f, Math.min(1f, samples[i]));
@@ -141,7 +164,8 @@ public class Sound {
         if (clips.length == 0) {
             return;
         }
-        // Use a voice that is free. If all are busy, restart the one whose turn it is.
+        // Use a voice that is free. If all are busy, take them in turn ("round robin"),
+        // so the copy we cut off is always the one that has been playing longest.
         Clip clip = null;
         for (int i = 0; i < clips.length && clip == null; i++) {
             if (!clips[i].isRunning()) {
@@ -223,9 +247,21 @@ public class Sound {
     }
 
     /**
-     * Sets a clip's loudness. Sound devices measure it in decibels (dB), where
-     * 0 dB means "as recorded" and every -6 dB roughly halves it. So a volume
-     * (a fraction from 0 to 1) becomes 20 * log10(volume) decibels.
+     * Sets a clip's loudness.
+     *
+     * Sound devices measure loudness in decibels (dB), a unit named after Alexander
+     * Graham Bell, the inventor of the telephone. Decibels are logarithmic: they count
+     * how many times bigger or smaller something is, not by how much. That suits our
+     * ears, which notice a sound doubling in strength about as much whether it was quiet
+     * or loud to begin with. 0 dB means "as recorded", negative values are quieter, and
+     * every -6 dB halves the size of the samples (to our ears, a sound seems about half
+     * as loud at around -10 dB).
+     *
+     * Our volume is a fraction from 0 to 1, so we convert it with the standard formula
+     * decibels = 20 * log10(volume): 1.0 gives 0 dB, 0.5 gives about -6 dB, 0.1 gives
+     * -20 dB. log10(0) would be minus infinity, so silence uses the quietest value the
+     * device allows. Not every device offers a volume control ("MASTER_GAIN"); on those,
+     * sounds simply play at full volume.
      */
     private void applyVolume(Clip clip) {
         if (!clip.isControlSupported(FloatControl.Type.MASTER_GAIN)) {

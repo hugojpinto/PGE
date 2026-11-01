@@ -4,14 +4,21 @@ import pge.gfx.Canvas;
 
 /**
  * Something drawn on the screen, on top of the game: a box, a label, a button...
+ * "UI" stands for "user interface", the parts of a program the user looks at and
+ * clicks. In games, the score, lives and timer shown on top of the action are also
+ * called the "HUD", for "heads-up display", a name borrowed from the displays that
+ * show information on the cockpit window of a fighter plane.
  *
- * UI elements use screen coordinates: (0, 0) is the top-left corner of the screen,
- * and the camera does not move them. Add them to a scene with addUI(...), and the
- * scene updates and draws them for you.
+ * UI elements use screen positions: (0, 0) is the top-left corner of the screen, and
+ * the camera does not move them. Add them to a scene with addUI(...), and the scene
+ * updates and draws them for you.
  *
  * This class is "abstract": it is not a complete element by itself, only the part
- * all elements share (a position, a size, being visible or not). Every kind of
- * element must say how it is drawn by writing its own draw() method.
+ * that all elements share (a position, a size, and whether it is visible). You cannot
+ * write new UIElement(...). Every kind of element extends it and must write its own
+ * draw() method, which is why draw() is marked abstract too. The scene can then keep
+ * all elements in one list of UIElements and call draw() on each, and Java runs the
+ * right version for each kind of element.
  */
 public abstract class UIElement {
 
@@ -70,7 +77,7 @@ public abstract class UIElement {
         return visible;
     }
 
-    /** Hidden elements are neither drawn nor updated (a hidden button cannot be clicked). */
+    /** Hidden elements are neither drawn nor updated, so a hidden button cannot be clicked. */
     public void setVisible(boolean visible) {
         this.visible = visible;
     }

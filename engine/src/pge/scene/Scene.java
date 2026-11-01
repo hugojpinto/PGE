@@ -44,12 +44,21 @@ import pge.world.TileMap;
  *   4. removed objects leave, newly added objects join (their start() is called)
  *
  * Step 4 happens after everything else, so it is always safe to add or remove
- * objects in the middle of a loop over getObjects().
+ * objects in the middle of a loop over getObjects(). This matters because Java does
+ * not allow a list to change while a for-each loop is going through it: the loop
+ * stops with a ConcurrentModificationException. A coin that removes itself while the
+ * scene is looping over all the objects would cause exactly that. So instead, remove()
+ * only marks the object, and add() puts it in a waiting list; the real changes happen
+ * in step 4, when no loop is running. Game engines often call this "deferred" adding
+ * and removing.
  *
  * EVERY FRAME, IN THIS ORDER
- *   1. drawBackground(canvas)   clears to the background color; override it for skies and parallax
+ *   1. drawBackground(canvas)   clears to the background colour; override it for skies and parallax
  *   2. the layers, then the objects sorted by depth, all through the camera
  *   3. the UI elements, then drawUI(canvas), in screen coordinates
+ *
+ * Things drawn later cover things drawn earlier, so the order above decides what is
+ * in front: the background at the back, the screen elements at the front.
  */
 public class Scene {
 
@@ -74,7 +83,7 @@ public class Scene {
     public void update() {
     }
 
-    /** Draws what is behind everything. By default, fills the screen with the background color. */
+    /** Draws what is behind everything. By default, fills the screen with the background colour. */
     public void drawBackground(Canvas canvas) {
         canvas.clear(backgroundColor);
     }
@@ -166,7 +175,12 @@ public class Scene {
 
     // ================================================================== run by the SceneRunner
 
-    /** Prepares the scene before start(): the camera needs to know the screen size. */
+    /**
+     * Prepares the scene before start(). The camera is created here, not in a
+     * constructor, because it needs the screen size, and a scene can be constructed
+     * before the engine knows it: Engine.run(new TitleScene(), 640, 360) constructs
+     * the scene first and only then opens the window.
+     */
     void setUp(int width, int height) {
         screenWidth = width;
         screenHeight = height;
@@ -180,8 +194,8 @@ public class Scene {
             }
         }
 
-        // A plain counting loop: objects added during this loop wait in "joining",
-        // so the list does not change while we walk through it.
+        // A plain counting loop instead of a for-each loop. Objects added during this
+        // loop go into "joining", so the list does not change while we walk through it.
         for (int i = 0; i < objects.size(); i++) {
             GameObject object = objects.get(i);
             if (!object.isRemoved()) {
@@ -199,7 +213,10 @@ public class Scene {
 
     /** Takes removed objects out, then lets new objects in and calls their start(). */
     void removeAndJoin() {
-        // Walk backwards: removing an item shifts the ones after it, and those we have already seen.
+        // Walk backwards through the list. Removing an item moves every item after it
+        // one place forward. Going forwards, we would then skip the item that moved
+        // into the place we just checked. Going backwards, the items that move are ones
+        // we have already checked.
         for (int i = objects.size() - 1; i >= 0; i--) {
             if (objects.get(i).isRemoved()) {
                 objects.remove(i);
@@ -241,10 +258,16 @@ public class Scene {
     }
 
     /**
-     * Fills drawOrder with the objects, lowest depth first, using insertion sort:
-     * take each object and slide it left past every object with a higher depth.
-     * Objects with the same depth keep the order they were added in. The list is
-     * almost always already sorted from the frame before, which makes this fast.
+     * Fills drawOrder with the objects, lowest depth first, using "insertion sort":
+     * take each object in turn and slide it left past every object with a higher
+     * depth. It is how many people sort a hand of playing cards.
+     *
+     * Insertion sort is slow for big, shuffled lists, but we chose it on purpose:
+     *   - it is short and easy to follow;
+     *   - it is "stable": objects with the same depth keep the order they were added
+     *     in, so they do not swap places and flicker from one frame to the next;
+     *   - the depths rarely change, so the list is almost always in order already, and
+     *     then insertion sort hardly has to move anything, which makes it very fast.
      */
     private void sortByDepth() {
         drawOrder.clear();

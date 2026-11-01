@@ -1,20 +1,30 @@
 package pge.gfx;
 
 /**
- * One image holding many same-sized pictures ("cells") in a grid. Games keep all
- * their sprites like this: every animation frame, every tile, side by side.
+ * One image holding many pictures of the same size ("cells"), arranged in a grid.
+ *
+ * A "sprite" is a small picture that moves around the screen on its own, such as a
+ * character or a coin. The word was used this way by engineers at Texas Instruments
+ * for a video chip they designed at the end of the 1970s, and it stuck. Games usually
+ * keep all their sprites in one image: every animation frame and every tile, side by
+ * side. One file is simpler to draw in and to load than hundreds of tiny ones.
+ * (In 3D games the same idea is called a "texture atlas".)
  *
  *   SpriteSheet sheet = SpriteSheet.load("assets/sprites.png", 16, 16);
  *   Bitmap hero = sheet.get(0);
  *
- * Cells are numbered left to right, then top to bottom. In a sheet 4 cells wide:
+ * Cells are numbered left to right, then top to bottom, the same order in which you
+ * read a page. In a sheet 4 cells wide:
  *
  *    0  1  2  3
  *    4  5  6  7
  *    8  9 10 11
  *
+ * So cell number n is in column n % columns and row n / columns.
+ *
  * Any cell size is fine (16x16, 24x32, 48x48...). If the image is not an exact
- * multiple of the cell size, the leftover strip on the right or bottom is ignored.
+ * multiple of the cell size, the leftover strip on the right or at the bottom is
+ * ignored.
  */
 public class SpriteSheet {
 
@@ -38,7 +48,8 @@ public class SpriteSheet {
         this.columns = image.getWidth() / cellWidth;
         this.rows = image.getHeight() / cellHeight;
 
-        // Cut every cell out once, now, so get() is instant later.
+        // Cut every cell out once, now. Then get() only has to look up an array, which is
+        // instant, instead of copying pixels every time a picture is drawn.
         cells = new Bitmap[columns * rows];
         for (int row = 0; row < rows; row++) {
             for (int col = 0; col < columns; col++) {

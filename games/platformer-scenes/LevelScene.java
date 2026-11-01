@@ -55,7 +55,10 @@ public class LevelScene extends Scene {
         level.setSolid(STONE, true);
         addLayer(level);
 
-        // Turn every marker tile into a real object, and clear the tile.
+        // Turn every marker tile into a real object, and clear the tile. This lets us
+        // place coins, slimes and the hero with the same level file and editor as the
+        // walls. (The Tiled editor has "object layers" for the same job; marker tiles
+        // are a simpler way to do it.)
         for (int row = 0; row < level.getRows(); row++) {
             for (int column = 0; column < level.getColumns(); column++) {
                 int tile = level.getTile(column, row);
@@ -163,7 +166,10 @@ public class LevelScene extends Scene {
         }
     }
 
-    /** The Hero calls this when a slime hurts it. */
+    /**
+     * The Hero calls this when a slime hurts it. The hero needs a cast to call it:
+     * (LevelScene) getScene(), because getScene() only knows it is some kind of Scene.
+     */
     public void heroHurt() {
         hearts = hearts - 1;
         updateScoreText();

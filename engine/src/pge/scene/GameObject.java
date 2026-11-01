@@ -27,6 +27,17 @@ import pge.gfx.Canvas;
  * From then on the scene calls update() 60 times per second and draws the object
  * for you. You never call update() or draw() yourself.
  *
+ * HOW THE SCENE CAN RUN YOUR CODE
+ * The scene keeps a list of GameObjects and calls update() on each of them. It does
+ * not know about Slime or Coin. But because Slime extends GameObject and "overrides"
+ * update() (writes its own version), Java runs Slime's version when the scene calls
+ * update() on a slime. This is the main idea of inheritance: code written for a
+ * general class works with every more specific class built from it.
+ *
+ * The name and the idea come from Unity, a popular game engine, where every thing in
+ * a game is a GameObject, and scripts on it have Start() and Update() methods that the
+ * engine calls. PGE's version is much smaller, but it works the same way.
+ *
  * WHAT YOU CAN OVERRIDE
  *   start()       once, when the object joins the scene
  *   update()      every update
@@ -38,8 +49,12 @@ import pge.gfx.Canvas;
  * forward automatically, so you don't need to call its update().
  *
  * HITBOX
- * overlaps(other) checks whether two objects touch. It uses each object's hitbox:
- * by default the size of its picture, or a smaller box you choose with setHitbox(...).
+ * overlaps(other) checks whether two objects touch. It uses each object's "hitbox",
+ * a rectangle that stands for the object's body: by default the size of its picture,
+ * or a smaller box you choose with setHitbox(...). Checking rectangles instead of
+ * every pixel is much faster, and players hardly notice the difference. Games usually
+ * make hitboxes a little smaller than the picture, because getting hit by the
+ * see-through corner of an enemy's picture feels unfair.
  *
  * NAMES
  * Give important objects a name ("hero", "slime"...) to find them from other objects:
@@ -283,8 +298,14 @@ public class GameObject {
     /**
      * True if this object's hitbox and the other's overlap.
      *
-     * Two rectangles overlap when each one starts before the other one ends,
-     * both left-to-right and top-to-bottom.
+     * Think of one direction first. Two stretches of a line, say from 2 to 5 and from
+     * 4 to 9, overlap when each one starts before the other one ends: 2 < 9 and 4 < 5.
+     * Two rectangles overlap when their stretches overlap both left-to-right and
+     * top-to-bottom. That is the four comparisons below.
+     *
+     * This test only works for rectangles whose sides are horizontal and vertical (not
+     * rotated). Game programmers call such a rectangle an "axis-aligned bounding box",
+     * or AABB, and this is the most common collision test in 2D games.
      */
     public boolean overlaps(GameObject other) {
         if (other == null || other == this) {
@@ -321,7 +342,10 @@ public class GameObject {
         return removed;
     }
 
-    /** Called by Scene.add. */
+    /**
+     * Called by Scene.add. It has no "public", so only classes in this package (like
+     * Scene) can call it: games cannot move an object to another scene by accident.
+     */
     void setScene(Scene scene) {
         this.scene = scene;
     }

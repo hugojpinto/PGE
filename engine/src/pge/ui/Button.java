@@ -16,12 +16,18 @@ import pge.input.Input;
  *   }
  *
  * You ask the button whether it was clicked, the same way you ask Input whether a
- * key was pressed. A click counts when the pointer goes down on the button and is
- * let go on the button too, like buttons everywhere else. Moving off the button
- * before letting go cancels the click.
+ * key was pressed. Desktop programs usually do it the other way round: you give the
+ * button a "listener", a piece of code it runs when it is clicked. That needs extra
+ * classes or lambdas, and the code that runs ends up far from the rest of the game's
+ * logic. Asking in update() keeps everything in one place, in the order it happens.
+ *
+ * A click counts when the pointer goes down on the button and is let go on the
+ * button too. Moving off the button before letting go cancels the click. This is how
+ * buttons behave in almost every program, so players expect it: it lets you change
+ * your mind halfway through a click.
  *
  * The button looks different while the pointer is over it (hover) and while it is
- * held down (pressed). Change the colors with the setters below.
+ * held down (pressed). Change the colours with the setters below.
  */
 public class Button extends UIElement {
 
@@ -68,7 +74,8 @@ public class Button extends UIElement {
         canvas.fillRect(getX(), getY(), getWidth(), getHeight(), fill);
         canvas.drawRect(getX(), getY(), getWidth(), getHeight(), borderColor);
 
-        // Center the text inside the button. Pressed buttons push the text down a pixel.
+        // Centre the text inside the button. While pressed, the text moves down one
+        // pixel, which makes the button look as if it is being pushed in.
         int textX = getX() + (getWidth() - canvas.getTextWidth(text)) / 2;
         int textY = getY() + (getHeight() - canvas.getTextHeight(text)) / 2;
         if (pressed && hovered) {
@@ -103,7 +110,7 @@ public class Button extends UIElement {
         borderColor = color;
     }
 
-    /** The fill colors: normally, with the pointer over it, and while held down. */
+    /** The fill colours: normally, with the pointer over it, and while held down. */
     public void setColors(int normal, int hover, int pressed) {
         normalColor = normal;
         hoverColor = hover;
@@ -113,7 +120,8 @@ public class Button extends UIElement {
     @Override
     public void setVisible(boolean visible) {
         super.setVisible(visible);
-        // A hidden button forgets any half-finished click.
+        // A hidden button forgets any half-finished click, so it cannot fire a click
+        // later, the moment it is shown again.
         pressed = false;
         clicked = false;
     }

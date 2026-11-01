@@ -6,6 +6,12 @@ import pge.world.TileMap;
 /**
  * A slime that wobbles back and forth. It turns around at walls and at the edge of
  * whatever it stands on, so it never falls off.
+ *
+ * This is about the simplest enemy behaviour (game makers call it "AI", even when it
+ * is this simple). Classic platformers are full of enemies like this; the red Koopa
+ * Troopas in Super Mario Bros., for example, turn around at the edge of a platform
+ * instead of walking off it. Simple, predictable enemies are fair: the player can
+ * watch them and learn when to jump.
  */
 public class Slime extends GameObject {
 

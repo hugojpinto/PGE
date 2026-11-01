@@ -20,7 +20,16 @@ import javax.imageio.ImageIO;
  * Run it from the PGE folder:   java tools/MakeAssets.java
  *
  * You only need this to re-create those files. To change the art, you can also
- * just open the PNGs in any pixel editor (Aseprite, Piskel, GIMP...) and paint.
+ * open the PNGs in any pixel art editor (Aseprite, Piskel, GIMP...) and paint.
+ *
+ * Making pictures, sounds or levels with code instead of by hand is called
+ * "procedural generation". Some games use it to make whole worlds (Minecraft builds
+ * its landscapes this way). Here it is used for a simpler reason: the art can be
+ * written down in a form you can read and change, and it is the same every time.
+ *
+ * The pictures are drawn into BufferedImages of TYPE_INT_ARGB, Java's picture format
+ * with an alpha channel, so the parts we do not paint stay see-through when saved as
+ * PNG. A colour here is written 0xAARRGGBB: FF at the front means fully solid.
  */
 public class MakeAssets {
 
@@ -276,7 +285,13 @@ public class MakeAssets {
 
     static void makeTiles() throws IOException {
         BufferedImage sheet = new BufferedImage(SHEET_COLUMNS * CELL, 3 * CELL, BufferedImage.TYPE_INT_ARGB);
-        Random random = new Random(42);   // fixed seed: the same "random" speckles every time
+        // java.util.Random does not produce truly random numbers. It calculates a long
+        // series of numbers that only look random, starting from a number called the
+        // "seed". The same seed always gives the same series, so with a fixed seed the
+        // speckles on the tiles come out the same every time this program runs.
+        // (42 is a popular joke choice among programmers, from the book "The
+        // Hitchhiker's Guide to the Galaxy", where it is "the answer to everything".)
+        Random random = new Random(42);
 
         // 1 Dirt: brown with darker and lighter speckles
         speckled(sheet, 1, 0xFF8C5A34, 0xFF6B4226, 0xFFA8703F, random);
@@ -291,7 +306,8 @@ public class MakeAssets {
             }
         }
 
-        // 2 Brick: red bricks, every other row shifted by half a brick
+        // 2 Brick: red bricks, every other row shifted by half a brick, the way real
+        // walls are built so that the gaps between bricks do not line up
         rect(sheet, 2, 0, 0, 16, 16, 0xFFB0503A);
         for (int y = 0; y < CELL; y = y + 8) {
             rect(sheet, 2, 0, y, 16, 1, 0xFF6E2E22);
@@ -300,7 +316,10 @@ public class MakeAssets {
         rect(sheet, 2, 0, 1, 1, 7, 0xFF6E2E22);
         rect(sheet, 2, 8, 9, 1, 7, 0xFF6E2E22);
 
-        // 3 Stone: a gray block, light on the top-left edges, dark on the bottom-right
+        // 3 Stone: a grey block, light on the top-left edges, dark on the bottom-right.
+        // Pixel artists usually pretend the light comes from the top left, so every
+        // object in a game is lit the same way. Lighter top and left edges and darker
+        // bottom and right edges make a flat square look raised.
         rect(sheet, 3, 0, 0, 16, 16, 0xFF8B8B9E);
         rect(sheet, 3, 0, 0, 16, 1, 0xFFC9C9D6);
         rect(sheet, 3, 0, 0, 1, 16, 0xFFC9C9D6);
@@ -340,7 +359,7 @@ public class MakeAssets {
         save(sheet, "games/platformer-scenes/assets/tiles.png");
     }
 
-    /** Fills a tile with a base color and sprinkles darker and lighter pixels over it. */
+    /** Fills a tile with a base colour and sprinkles darker and lighter pixels over it. */
     static void speckled(BufferedImage sheet, int cell, int base, int dark, int light, Random random) {
         rect(sheet, cell, 0, 0, CELL, CELL, base);
         for (int i = 0; i < 18; i++) {
@@ -487,7 +506,14 @@ public class MakeAssets {
         System.out.println("Wrote " + path);
     }
 
-    /** Fills an ellipse inside one cell, but not below row maxY. */
+    /**
+     * Fills an ellipse (a stretched circle) inside one cell, but not below row maxY.
+     *
+     * A point (x, y) is inside an ellipse with centre (cx, cy) and radii rx and ry when
+     *   ((x - cx) / rx)^2 + ((y - cy) / ry)^2 <= 1
+     * This is the circle formula x^2 + y^2 <= r^2, with each direction scaled
+     * separately. We test the centre of every pixel, which is why 0.5 is added.
+     */
     static void ellipse(BufferedImage sheet, int cell, double centerX, double centerY,
                         double radiusX, double radiusY, int color, int maxY) {
         for (int y = 0; y < CELL && y <= maxY; y++) {
@@ -509,7 +535,15 @@ public class MakeAssets {
         }
     }
 
-    /** Paints every empty pixel that touches a painted one, giving the sprite a 1-pixel border. */
+    /**
+     * Paints every empty pixel that touches a painted one, giving the sprite a dark
+     * border 1 pixel wide. Most pixel art outlines its sprites like this, so they stand
+     * out clearly against any background.
+     *
+     * We first only mark the pixels, then paint them all at the end. If we painted
+     * straight away, a newly painted outline pixel would count as "painted" for its
+     * neighbours, and the outline would keep growing.
+     */
     static void outline(BufferedImage sheet, int cell, int color) {
         boolean[][] mark = new boolean[CELL][CELL];
         for (int y = 0; y < CELL; y++) {

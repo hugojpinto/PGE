@@ -148,7 +148,8 @@ public class Main implements Game {
         if (Input.wasPressed(Key.R)) {
             restart();
         }
-        // The pointer is in screen pixels; the camera turns that into a world position.
+        // The pointer position is in screen pixels. The world is bigger than the screen,
+        // so we ask the camera which world position is under the pointer.
         if (Input.wasPointerPressed() && Input.isPointerInside()) {
             heroX = camera.toWorldX(Input.getPointerX()) - SPRITE_SIZE / 2;
             heroY = camera.toWorldY(Input.getPointerY()) - SPRITE_SIZE / 2;
@@ -229,7 +230,10 @@ public class Main implements Game {
         canvas.drawText(text, 44, 12, Color.WHITE);
     }
 
-    /** Bottom-right: the whole world shrunk 20 times. */
+    /**
+     * Bottom-right: a "mini-map", the whole world shrunk 20 times. Dividing every world
+     * position by 20 gives its place on the small map.
+     */
     void drawMiniMap(Canvas canvas) {
         int shrink = 20;
         int mapWidth = WORLD_WIDTH / shrink;
@@ -247,14 +251,20 @@ public class Main implements Game {
         canvas.fillRect(left + (int) heroX / shrink, top + (int) heroY / shrink, 2, 2, Color.CYAN);
     }
 
-    /** Text centered left-to-right, with a dark shadow one step down and right. */
+    /** Text centred left-to-right, with a dark shadow one step down and right. */
     void drawCentered(Canvas canvas, String text, int y, int color, int scale) {
         int x = (canvas.getWidth() - canvas.getTextWidth(text, scale)) / 2;
         canvas.drawText(text, x + scale, y + scale, Color.BLACK, scale);
         canvas.drawText(text, x, y, color, scale);
     }
 
-    /** True if two 16x16 sprites at these positions overlap (with a little forgiveness). */
+    /**
+     * True if two 16x16 sprites at these positions overlap. Both squares are made 3
+     * pixels smaller on every side (the "margin"), so the corners of the pictures have
+     * to overlap a little before it counts. Games are often forgiving like this: it
+     * feels fairer to the player. For the overlap test itself, see
+     * GameObject.overlaps in the engine.
+     */
     static boolean overlaps(double ax, double ay, double bx, double by) {
         double margin = 3;
         return ax + margin < bx + SPRITE_SIZE - margin

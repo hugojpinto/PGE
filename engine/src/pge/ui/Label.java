@@ -12,9 +12,13 @@ import pge.gfx.Font;
  *   ...
  *   score.setText("SCORE " + points);
  *
- * Options: setColor, setScale (2 = twice as big), setShadowColor (a dark copy one
- * step down and right makes text readable on any background), and setCentered(true)
- * to make x the middle of the text instead of its left edge.
+ * Options: setColor, setScale (2 = twice as big), setShadowColor, and
+ * setCentered(true) to make x the middle of the text instead of its left edge.
+ *
+ * The shadow is a copy of the text in another colour, drawn one step down and to the
+ * right, underneath. A dark shadow keeps light text readable on any background, even
+ * a busy one. Games have used this "drop shadow" for their score and menus since the
+ * 1980s.
  */
 public class Label extends UIElement {
 
@@ -44,7 +48,7 @@ public class Label extends UIElement {
         canvas.setFont(oldFont);
     }
 
-    /** Where the text actually starts: x itself, or half the width to the left of x when centered. */
+    /** Where the text actually starts: x itself, or half the width to the left of x when centred. */
     private int getLeft() {
         if (centered) {
             return getX() - getWidth() / 2;
@@ -58,7 +62,11 @@ public class Label extends UIElement {
         return px >= left && px < left + getWidth() && py >= getY() && py < getY() + getHeight();
     }
 
-    /** Recalculates the width and height whenever the text, font or scale change. */
+    /**
+     * Recalculates the width and height whenever the text, font or scale change. The
+     * size has to be right for centring the text, and for contains(), which checks
+     * whether the mouse is over the label.
+     */
     private void measure() {
         setSize(textWidth(text, font, scale), textHeight(text, font, scale));
     }
@@ -98,7 +106,7 @@ public class Label extends UIElement {
         return shadowColor;
     }
 
-    /** A copy of the text in this color is drawn one step down and right. Color.TRANSPARENT for none. */
+    /** A copy of the text in this colour is drawn one step down and right. Color.TRANSPARENT for none. */
     public void setShadowColor(int color) {
         shadowColor = color;
     }

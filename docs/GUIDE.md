@@ -1,7 +1,8 @@
 # The PGE Guide
 
-This guide takes you from "I have never used PGE" to "I added a feature to the
-engine". Read it in order the first time; later, jump to the part you need.
+PGE (Pinto's Game Engine) is a small engine for making 2D games in Java. This guide
+starts with your first game and ends with you adding new features to the engine
+itself. Read it in order the first time. After that, use it to look things up.
 
 1. [Getting started](#1-getting-started)
 2. [Your first game](#2-your-first-game)
@@ -19,63 +20,240 @@ engine". Read it in order the first time; later, jump to the part you need.
 
 ## 1. Getting started
 
-You need **Java 25** (a JDK, which includes the compiler). Check in a terminal:
+You need Java 25 or newer, and it has to be a JDK (the version of Java that
+includes the compiler). To check which version you have, type this in a terminal:
 
 ```sh
 java -version
 ```
 
-It should say 25 or higher. Then, from the PGE folder:
+Then go to the PGE folder and type:
 
 ```sh
 java Build.java demo
 ```
 
-This compiles the engine and every game, then runs `games/demo`. Try the others too:
-`platformer`, `platformer-scenes` and `starter`.
+This compiles the engine and all the games, and then starts the game in
+`games/demo`. The other games are called `platformer`, `platformer-scenes` and
+`starter`. Try them too.
 
-`Build.java` is the whole build system: a normal Java program that calls the Java
-compiler. Open it and read it; there is no magic in it either.
+`Build.java` does all the building. It is an ordinary Java program that calls the
+Java compiler, so you can open it and read how it works.
 
 ### Using an editor
 
-Any editor works, since you build from the terminal. For autocompletion in
-**IntelliJ IDEA** or **VS Code** (with the "Extension Pack for Java"), tell the
-editor where the source code is:
+You can build and run every game from the terminal, so any text editor will do. But
+a Java editor helps a lot: it suggests method names as you type, underlines mistakes
+before you compile, jumps to the code of any method, and lets you stop a running game
+and look inside it (see "Using the debugger" below). The next sections explain how to
+set up the two most popular ones, Visual Studio Code and IntelliJ IDEA.
 
-- `engine/src`, the engine;
-- `games/yourgame`, the game you are working on.
+PGE has no build tool (such as Maven or Gradle) that an editor could read its setup
+from, so you tell the editor three things yourself:
 
-Add only **one** game folder at a time: every game has its own `Main` class, and an
-editor that sees two of them gets confused. In IntelliJ, set the project SDK to Java
-25 and mark both folders as *Sources Root*. In VS Code, add them to
-`java.project.sourcePaths` in `.vscode/settings.json`.
+1. **Which Java to use:** a JDK of version 25 or newer.
+2. **Where the code is:** the folder `engine/src`, and the folder of the game you are
+   working on, such as `games/mygame`. Only add one game folder at a time. Every
+   game has its own class called `Main` (and some share other names, such as `Coin`),
+   and two classes with the same name confuse the editor.
+3. **Which folder the game runs in:** the game's own folder, such as `games/mygame`.
+   Games load their files with paths like `"assets/hero.png"`, which only work when
+   the game is started in its own folder. If you forget this, the game stops with
+   `Could not find the image 'assets/...'`.
+
+The settings files that both editors create (`.vscode/` and `.idea/`) are listed in
+`.gitignore`, so each person keeps their own and they are never committed.
+
+### Visual Studio Code
+
+Visual Studio Code ("VS Code") is a free editor from Microsoft. It needs extensions
+to understand Java.
+
+**Install the Java extensions.** Open the Extensions view (the icon with four
+squares on the left, or Cmd+Shift+X on a Mac, Ctrl+Shift+X on Windows), search for
+**Extension Pack for Java** (by Microsoft) and install it. It includes the Java
+language support, the debugger and a test runner.
+
+**Open the PGE folder** with File > Open Folder. The first time, VS Code may ask
+whether you trust the folder's authors; answer yes.
+
+**Tell VS Code about the code and the JDK.** Create a folder called `.vscode` in the
+PGE folder, and in it a file called `settings.json`:
+
+```json
+{
+    "java.project.sourcePaths": ["engine/src", "games/mygame"],
+    "java.project.outputPath": "bin",
+    "java.configuration.runtimes": [
+        {
+            "name": "JavaSE-25",
+            "path": "/path/to/your/jdk-25",
+            "default": true
+        }
+    ]
+}
+```
+
+- `java.project.sourcePaths` lists the code folders. Change `games/mygame` to the game
+  you are working on.
+- `java.project.outputPath` is where VS Code puts the compiled classes. `bin` keeps
+  them apart from the `out` folder that `Build.java` uses.
+- `java.configuration.runtimes` says where the JDK is. To find the path, run
+  `java -XshowSettings:properties -version` in a terminal and look for `java.home`.
+  (With SDKMAN it is something like `/Users/you/.sdkman/candidates/java/25.0.4-tem`.)
+
+After saving, the Java extension takes a moment to read the project; you can watch
+it in the status bar at the bottom. When it is done, open `games/mygame/Main.java`
+and type `Input.` inside `update()`: a list of its methods should appear.
+
+**Run the game.** In the same `.vscode` folder, create `launch.json`:
+
+```json
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "java",
+            "name": "Run mygame",
+            "request": "launch",
+            "mainClass": "Main",
+            "cwd": "${workspaceFolder}/games/mygame"
+        }
+    ]
+}
+```
+
+`cwd` ("current working directory") is the folder the game runs in, the third of the
+three things above. Now press F5 (or use Run > Start Debugging) to start the game.
+
+**Or run it with Build.java.** You can also use the built-in terminal (View >
+Terminal) and type `java Build.java mygame`, exactly as in section 1. To make that a
+single key press, create `.vscode/tasks.json`:
+
+```json
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Build and run mygame",
+            "type": "shell",
+            "command": "java Build.java mygame",
+            "group": { "kind": "build", "isDefault": true }
+        }
+    ]
+}
+```
+
+Then Cmd+Shift+B (Ctrl+Shift+B on Windows) builds and runs the game. This way uses
+exactly the same build as handing in the game, but it does not stop at breakpoints.
+
+**Switching to another game:** change `games/mygame` in `settings.json` and
+`launch.json`. If the editor still shows errors from the old game, open the command
+palette (Cmd+Shift+P or Ctrl+Shift+P) and run **Java: Clean Java Language Server
+Workspace**.
+
+### IntelliJ IDEA
+
+IntelliJ IDEA is a Java editor from JetBrains. Students can use all of its features
+for free through JetBrains' education program (search for "JetBrains student
+licence"), and PGE only needs the basic Java features.
+
+**Open the PGE folder** with File > Open. IntelliJ sees that there is no build tool
+and opens it as a plain project.
+
+**Choose the JDK.** Open File > Project Structure (Cmd+; on a Mac, Ctrl+Alt+Shift+S
+on Windows). Under **Project**, set **SDK** to a JDK of version 25 or newer. If none
+is listed, choose **Add SDK > JDK** and pick the JDK's folder, or **Download JDK** to
+let IntelliJ fetch one. Set **Language level** to "SDK default".
+
+**Mark the code folders.** In the Project panel on the left, right-click
+`engine/src` and choose **Mark Directory as > Sources Root**. Do the same for your
+game's folder, such as `games/mygame`. The folders turn blue. While you are there,
+right-click `out` and `dist` (if they exist) and choose **Mark Directory as >
+Excluded**, so IntelliJ does not search through compiled files.
+
+**Create a run configuration.** Open Run > Edit Configurations, click **+** and
+choose **Application**. Fill in:
+
+| Field | Value |
+|---|---|
+| Name | `mygame` |
+| Main class | `Main` |
+| Working directory | `$PROJECT_DIR$/games/mygame` |
+| Module (or "Use classpath of module") | `PGE` |
+
+`$PROJECT_DIR$` is IntelliJ's name for the PGE folder. Click OK. Now the green
+triangle at the top of the window runs the game, and the bug icon next to it starts
+it in the debugger.
+
+**Or run it with Build.java.** Open the built-in terminal (View > Tool Windows >
+Terminal) and type `java Build.java mygame`.
+
+**Switching to another game:** right-click the old game folder and choose **Mark
+Directory as > Unmark as Sources Root**, mark the new one, and change the working
+directory in the run configuration.
+
+**Optional: every game at once.** IntelliJ can hold several *modules* in one
+project, and each module has its own source folders. Make one module for the engine
+and one per game, and give every game module a dependency on the engine module
+(Project Structure > Modules > your game > Dependencies > **+** > Module Dependency).
+Then all games are open together without their `Main` classes getting in each
+other's way, and you make one run configuration per game. It takes ten minutes to
+set up, and is worth it once you work on more than one game.
+
+### Using the debugger
+
+The debugger lets you pause a running game at any line and look at all its
+variables. It is the fastest way to find out why something does not behave as you
+expect.
+
+1. Click in the margin to the left of a line number, for example on the first line
+   of `update()`. A red dot appears: that is a *breakpoint*.
+2. Start the game with the debugger: F5 in VS Code, or the bug icon in IntelliJ.
+3. When the game reaches the breakpoint, it freezes, and the editor shows the line.
+   The Variables panel shows the value of every field, such as `playerX` and `score`.
+4. **Step Over** (F10 in VS Code, F8 in IntelliJ) runs one line and stops again.
+   **Step Into** (F11 in VS Code, F7 in IntelliJ) goes inside the method called on
+   that line, even into the engine's own code. **Continue** (F5 in VS Code; in
+   IntelliJ, F9 on Windows or Cmd+Option+R on a Mac) runs until the next breakpoint.
+   On a Mac laptop, the F keys may need the fn key.
+
+A breakpoint in `update()` stops the game 60 times per second, so for anything that
+happens rarely, put it inside the `if` that you are curious about. You can also
+right-click a breakpoint and give it a condition, such as `score == 10`, so it only
+stops when that is true.
+
+When the game continues after a long pause, the engine runs up to five updates in
+a row to catch up, and then carries on as normal (see "The game loop" in
+`Engine.java`), so it is safe to pause for as long as you like.
 
 ---
 
+
 ## 2. Your first game
 
-Copy `games/starter` to a new folder, say `games/mygame`, and run it:
+Copy the folder `games/starter` and name the copy `games/mygame`. Then run it:
 
 ```sh
 java Build.java mygame
 ```
 
-You get a yellow square you can move with the arrows. Open `games/mygame/Main.java`.
-It has three methods, and the engine calls them for you:
+A yellow square appears, and you can move it with the arrow keys. Now open
+`games/mygame/Main.java`. It has three methods, and the engine calls them for you:
 
-| Method | When | What to do there |
+| Method | When the engine calls it | What you do in it |
 |---|---|---|
-| `init()` | once, at the start | load pictures, set things up |
-| `update()` | 60 times per second | move things, check rules, read the keyboard |
-| `draw(canvas)` | after every update | paint everything onto the canvas |
+| `init()` | once, when the game starts | load pictures and sounds, set things up |
+| `update()` | 60 times every second | move things, check the rules, read the keyboard |
+| `draw(canvas)` | after every update | draw everything on the screen |
 
-Now change things, one at a time, running the game after each change:
+Now try these changes. Make one change at a time and run the game after each one.
 
-1. **Make the player faster.** Change `playerSpeed`.
-2. **Change the colors.** Try `Color.PINK`, or any color as a number: `0xFF8800` is
-   orange (red FF, green 88, blue 00).
-3. **Keep the player on the screen.** In `update()`, after moving:
+1. Make the square faster by changing `playerSpeed`.
+2. Change the colours. Try `Color.PINK`, or write a colour as a number: `0xFF8800`
+   is orange. The six digits are three pairs, for red (FF), green (88) and blue (00).
+3. Stop the square from leaving the screen. Put this in `update()`, after the code
+   that moves it:
    ```java
    if (playerX < 0) {
        playerX = 0;
@@ -84,16 +262,17 @@ Now change things, one at a time, running the game after each change:
        playerX = Engine.getWidth() - 16;
    }
    ```
-   (16 is the size of the square.) Do the same for `playerY` with `Engine.getHeight()`.
-4. **Add something to collect.** Add `coinX` and `coinY` fields, draw a circle there
-   with `canvas.fillCircle(...)`, and in `update()` check whether the player is
-   close to it. If so, add a point and move the coin somewhere random:
-   `coinX = Math.random() * 600;`.
-5. **Add a timer.** Count updates in a field; 60 updates is one second. Show the time
-   left with `canvas.drawText(...)`, and stop the game when it reaches zero.
+   16 is the width of the square. Do the same for `playerY`, using
+   `Engine.getHeight()`.
+4. Add a coin to collect. Add two fields, `coinX` and `coinY`. Draw a circle there
+   with `canvas.fillCircle(...)`. In `update()`, check whether the square is close
+   to the coin. If it is, add a point and move the coin to a random place, for
+   example with `coinX = Math.random() * 600;`.
+5. Add a time limit. Count updates in a field: 60 updates make one second. Show the
+   time left with `canvas.drawText(...)`, and end the game when it reaches zero.
 
-At that point you have a real game. Everything after this is about making it look
-better and grow bigger without becoming a mess.
+You now have a small but complete game. The rest of this guide shows you how to
+make it look better, and how to keep the code organised as the game grows.
 
 ---
 
@@ -101,55 +280,60 @@ better and grow bigger without becoming a mess.
 
 ### Update, then draw
 
-The engine runs `update()` exactly 60 times per second on every computer, and calls
-`draw()` after each one. Keep the two jobs apart:
+The engine calls `update()` exactly 60 times per second, on every computer. After
+each update it calls `draw()`. Each method has its own job:
 
-- `update()` **changes** the game (positions, scores, timers) and never draws.
-- `draw()` **shows** the game and never changes it.
+- `update()` changes the game: positions, scores, timers. It never draws.
+- `draw()` shows the game. It never changes anything.
 
-Because the rate is fixed, `x = x + 2` always means "2 pixels per update", or 120
-pixels per second. You never need to measure time.
+Because updates always come 60 times per second, `x = x + 2` always means
+"move 2 pixels per update", which is 120 pixels per second. You never have to
+measure time yourself.
 
 ### Coordinates
 
-The game picture is 640 x 360 pixels (you choose this in `Engine.run`). `(0, 0)` is
-the **top-left** corner. `x` grows to the right and **`y` grows downward**, so
-"jumping up" means making `y` smaller.
+The game picture is 640 pixels wide and 360 pixels tall. You choose this size in
+`Engine.run`. The point `(0, 0)` is the top-left corner. `x` gets bigger as you go
+right, and `y` gets bigger as you go down. So to move something up, you make its
+`y` smaller.
 
-The window is bigger than the picture: the engine scales it up 2x, 3x, 4x... so
-every pixel stays a crisp square. Your code never needs to know the window size.
+The window is bigger than the game picture. The engine blows the picture up 2, 3 or
+4 times so that it fills the window, and each game pixel becomes a small square
+on the screen. Your code never needs to know how big the window is.
 
 ### World and screen
 
-When the world is bigger than the screen, the **camera** decides which part is
-visible. Things in the world (player, enemies, the level) are drawn with the camera
-on; the score and menus are drawn with it off, so they stay put:
+Often the game world is bigger than the screen. The camera decides which part of
+the world you see. You draw the world (the player, the enemies, the level) with the
+camera on. You draw the score and the menus with the camera off, so they stay in
+the same place on the screen:
 
 ```java
-canvas.setCamera(cameraX, cameraY);   // world
+canvas.setCamera(cameraX, cameraY);   // the world
 canvas.drawBitmap(hero, heroX, heroY);
-canvas.resetCamera();                 // screen
+canvas.resetCamera();                 // the screen
 canvas.drawText("Score: " + score, 4, 4, Color.WHITE);
 ```
 
-The `Camera` class (section 6) does the arithmetic for you.
+The `Camera` class (section 6) works out `cameraX` and `cameraY` for you.
 
 ### Keyboard and mouse
 
-| Question | Code |
+| You want to know | Write |
 |---|---|
-| Is the key held down right now? | `Input.isDown(Key.LEFT)` |
-| Was it pressed just now? (once per press) | `Input.wasPressed(Key.SPACE)` |
-| Was it let go just now? | `Input.wasReleased(Key.SPACE)` |
+| Is the key being held down? | `Input.isDown(Key.LEFT)` |
+| Was the key pressed just now? | `Input.wasPressed(Key.SPACE)` |
+| Was the key let go just now? | `Input.wasReleased(Key.SPACE)` |
 | Where is the mouse? | `Input.getPointerX()`, `Input.getPointerY()` |
-| Was it clicked just now? | `Input.wasPointerPressed()` |
+| Was the mouse clicked just now? | `Input.wasPointerPressed()` |
 
-Use `isDown` for things that last (walking) and `wasPressed` for things that happen
-once (jumping, shooting, choosing a menu item).
+Use `isDown` for things that go on while the key is held, like walking. Use
+`wasPressed` for things that should happen once per key press, like jumping,
+shooting or choosing a menu item.
 
-The engine has three keys of its own: **F11** (or Alt+Enter) for fullscreen, and
-**F3** to show how many milliseconds each frame takes. You have about 16.7 ms per
-frame; PGE's example games use about 2.
+Some keys work in every game. F11 (or Alt+Enter) switches fullscreen on and off.
+F3 shows how many milliseconds each frame takes. Each frame can take up to 16.7
+milliseconds, and the example games use about 2.
 
 ---
 
@@ -157,45 +341,58 @@ frame; PGE's example games use about 2.
 
 ### Loading pictures
 
-Put PNG files in your game's `assets` folder.
+Put your PNG files in the `assets` folder of your game, and load them like this:
 
 ```java
 Bitmap hero = Bitmap.load("assets/hero.png");
 ```
 
-See-through parts of the PNG are not drawn. Old-style art that uses a background
-color (often bright pink) instead works too:
+The see-through parts of the PNG are not drawn. Some older pixel art uses one
+background colour (often bright pink) instead of see-through pixels. You can load
+those too, by saying which colour to leave out:
 `Bitmap.load("assets/hero.png", 0xFF00FF)`.
 
-Games usually keep many small pictures in one image, a **sprite sheet**:
+Games usually keep lots of small pictures together in one image, called a
+*sprite sheet*. The pictures are all the same size and sit in a grid:
 
 ```java
-SpriteSheet sheet = SpriteSheet.load("assets/sprites.png", 16, 16);   // cells of 16x16
-Bitmap hero = sheet.get(0);       // the first cell
-Bitmap coin = sheet.get(8);       // cells count left to right, then down
+// each picture in the sheet is 16 by 16 pixels
+SpriteSheet sheet = SpriteSheet.load("assets/sprites.png", 16, 16);
+
+Bitmap hero = sheet.get(0);    // the first picture
+Bitmap coin = sheet.get(8);    // count left to right, then go to the next row
 ```
 
-Look at `games/demo/assets/sprites.png` to see how it is laid out. Draw your own
-art with any pixel editor: [Piskel](https://www.piskelapp.com/) is free and runs in
-the browser, [Aseprite](https://www.aseprite.org/) is the favorite of many pixel artists.
+Open `games/demo/assets/sprites.png` to see what a sprite sheet looks like. You can
+draw your own pictures with a pixel art editor. [Piskel](https://www.piskelapp.com/)
+is free and runs in the browser. [Aseprite](https://www.aseprite.org/) costs a
+little money and has more features.
 
-### Drawing
+### Drawing pictures
 
 ```java
-canvas.drawBitmap(hero, x, y);                     // as it is
-canvas.drawBitmap(hero, x, y, true, false);        // mirrored left-right (walking left)
-canvas.drawSilhouette(hero, x, y, false, Color.WHITE);   // one solid color: a "hit" flash
+// normal
+canvas.drawBitmap(hero, x, y);
+
+// flipped left to right, for walking left
+canvas.drawBitmap(hero, x, y, true, false);
+
+// all one colour, for a "got hit" flash
+canvas.drawSilhouette(hero, x, y, false, Color.WHITE);
 ```
 
-Positions are whole numbers (`int`). If you keep positions as `double` (smoother
-movement), convert when drawing: `(int) heroX`.
+The positions must be whole numbers (`int`). If you store positions as `double`,
+which gives smoother movement, turn them into `int` when you draw:
+`(int) heroX`.
 
 ### Animation
 
-An `Animation` is a list of pictures shown one after the other:
+An `Animation` is a list of pictures that are shown one after another, like a
+flip book:
 
 ```java
-Animation walk = new Animation(sheet.getFrames(0, 4), 8);   // cells 0-3, 8 updates each
+// pictures 0 to 3 of the sheet, each one shown for 8 updates
+Animation walk = new Animation(sheet.getFrames(0, 4), 8);
 
 // in update():
 walk.update();
@@ -209,12 +406,12 @@ canvas.drawBitmap(walk.getFrame(), x, y);
 ```java
 canvas.drawText("Score: " + score, 4, 4, Color.WHITE);
 canvas.drawText("GAME OVER", 200, 150, Color.RED, 4);   // 4 times bigger
-int width = canvas.getTextWidth("GAME OVER", 4);        // for centering
+int width = canvas.getTextWidth("GAME OVER", 4);        // for centering text
 ```
 
-The font is `engine/src/pge/gfx/font.png`. It has the English letters, digits and
-punctuation; letters like `é` or `ç` show as a box. Fix that as an exercise
-(section 11).
+The letters come from the image `engine/src/pge/gfx/font.png`. It has English
+letters, digits and punctuation. Letters like `é` or `ç` show up as a box. Adding
+them is one of the exercises in section 11.
 
 ---
 
@@ -222,59 +419,77 @@ punctuation; letters like `é` or `ç` show as a box. Fix that as an exercise
 
 ### Playing sounds
 
-Put WAV files in your game's `assets` folder (Java can't read MP3 or OGG):
+Put WAV files in your game's `assets` folder. Java cannot read MP3 or OGG files.
 
 ```java
-Sound jump = Sound.load("assets/jump.wav");     // in init(): loading is slow
-jump.play();                                     // in update(), when the player jumps
+// in init(), because loading takes time:
+Sound jump = Sound.load("assets/jump.wav");
+
+// in update(), when the player jumps:
+jump.play();
 ```
 
-If the same sound plays again before it has finished, a second copy plays on top
-(up to four at once), so fast coin pickups don't cut each other off.
+If a sound is played again before it has finished, the second one plays at the
+same time as the first. Up to four copies can play at once, so picking up coins
+quickly does not cut the earlier coin sounds short.
 
 Music is a sound that repeats:
 
 ```java
 Sound music = Sound.load("assets/music.wav");
 music.setVolume(0.5);    // half as loud
-music.loop();            // forever, until music.stop()
+music.loop();            // plays again and again, until music.stop()
 ```
 
-A mute key: `Sound.setMasterVolume(0)` silences everything, `1` brings it back. See
-`games/platformer-scenes/Sounds.java`: one class that loads every sound once, so
-any object can call `Sounds.jump.play()`.
+To add a mute key, use `Sound.setMasterVolume(0)` to turn every sound off and
+`Sound.setMasterVolume(1)` to turn them back on. Have a look at
+`games/platformer-scenes/Sounds.java`. It loads every sound once, and then any part
+of the game can play one with, for example, `Sounds.jump.play()`.
 
-Free sounds: [jsfxr](https://sfxr.me) makes retro sound effects in the browser
-(press a button like "Jump" or "Pickup", then export WAV), and
-[Audacity](https://www.audacityteam.org/) converts and edits other files.
+You can find or make free sounds on the web. [jsfxr](https://sfxr.me) makes retro
+sound effects in the browser: press a button such as "Jump" or "Pickup", then
+export a WAV file. [Audacity](https://www.audacityteam.org/) can edit sounds and
+convert other formats to WAV.
 
 ### Making sounds with code
 
-A sound is an array of numbers between -1 and 1, 22,050 of them per second, just as
-a picture is an array of colors. `Synth` fills those arrays for you:
+A sound is stored as a list of numbers between -1 and 1. There are 22,050 numbers
+for every second of sound. A picture is also a list of numbers (one colour per
+pixel), so the idea is the same. The `Synth` class makes these lists for you:
 
 ```java
 // a "bwoop" that slides from 260 Hz up to 620 Hz in 0.16 seconds, at 40% volume
 Sound jump = Sound.fromSamples(Synth.tone(Synth.SQUARE, 260, 620, 0.16, 0.4));
 
-// two notes one after the other
+// two notes, one after the other
 Sound coin = Sound.fromSamples(Synth.join(
         Synth.note(Synth.SQUARE, "B5", 0.06, 0.3),
         Synth.note(Synth.SQUARE, "E6", 0.2, 0.3)));
 ```
 
-Waves: `SQUARE` (buzzy, the classic game sound), `TRIANGLE` (soft, good for bass),
-`SINE` (pure), `SAW` (harsh), `NOISE` (hiss: explosions and drums). Notes are names
-like `"C4"` (middle C), `"F#5"` or `"Bb3"`. `Synth.mix(a, b)` plays two sounds at once.
+Hz (hertz) measures how high a sound is. More hertz means a higher sound.
 
-`games/demo` makes all its sounds this way, with no sound files at all.
-`tools/MakeSounds.java` makes the platformer's sounds *and its music*: music is just
-silence with notes added into it at the right moments (`Synth.addInto`). Change a
-note, run it again, and listen. `sound.save("assets/mysound.wav")` keeps a sound you
-made.
+There are five wave shapes, and each one sounds different:
 
-If a computer has no working sound output, PGE prints one warning and the game runs
-silently. It never crashes because of missing speakers.
+| Wave | Sound |
+|---|---|
+| `SQUARE` | buzzy, the classic video game sound |
+| `TRIANGLE` | soft, good for bass |
+| `SINE` | pure and gentle, like a whistle |
+| `SAW` | harsh, good for alarms |
+| `NOISE` | a hiss, good for explosions and drums |
+
+Notes have names like `"C4"` (middle C on a piano), `"F#5"` or `"Bb3"`.
+`Synth.mix(a, b)` plays two sounds at the same time.
+
+`games/demo` makes all its sounds this way and has no sound files at all.
+`tools/MakeSounds.java` makes the platformer's sound effects and its music. To make
+music, it starts with silence and adds each note at the right moment, using
+`Synth.addInto`. Change a note, run it again and listen to the result. To keep a
+sound you made, save it with `sound.save("assets/mysound.wav")`.
+
+If a computer has no working sound output, PGE prints a warning and the game runs
+without sound. The game does not crash.
 
 ---
 
@@ -282,7 +497,9 @@ silently. It never crashes because of missing speakers.
 
 ### Tile maps
 
-A level is a grid of tiles, stored as a text file of numbers (CSV), one line per row:
+A level is often built from small square pictures called *tiles*, arranged in a
+grid. PGE stores a level as a text file of numbers, with one line for each row of
+the grid. This kind of file is called CSV (comma-separated values):
 
 ```
 -1,-1,-1,-1
@@ -290,7 +507,8 @@ A level is a grid of tiles, stored as a text file of numbers (CSV), one line per
  0, 0, 0, 0
 ```
 
-Each number is a cell of a sprite sheet (the *tile set*); `-1` is empty.
+Each number says which picture of a sprite sheet goes in that place. This sprite
+sheet is called the *tile set*. `-1` means the place is empty.
 
 ```java
 SpriteSheet tiles = SpriteSheet.load("assets/tiles.png", 16, 16);
@@ -302,22 +520,24 @@ level.setSolid(3, true);
 level.draw(canvas);
 ```
 
-Editing numbers by hand gets old fast. The free [Tiled](https://www.mapeditor.org/)
-editor lets you paint levels, then **File > Export As > CSV** writes one file per
-layer in exactly this format.
+Typing numbers by hand is slow. The free [Tiled](https://www.mapeditor.org/) editor
+lets you paint levels with the mouse. Use File > Export As > CSV to save them. It
+writes one file for each layer, in exactly the format above.
 
 ### Stopping at walls
 
-Ask the map whether a rectangle touches a wall:
+You can ask the level whether a rectangle touches a wall:
 
 ```java
 level.overlapsSolid(x, y, width, height)
 ```
 
-The simplest movement that never goes through walls: **move one pixel at a time,
-and before each step, check whether the next position is free.** Find
-`moveHorizontally` in `games/platformer/Main.java`: it is about 15 lines, and worth
-understanding line by line. Gravity is just a speed that grows every update:
+Here is a simple way to move a character without ever going through a wall: move
+one pixel at a time, and before each step, check whether the next position is free.
+The method `moveHorizontally` in `games/platformer/Main.java` does exactly this in
+about 15 lines. Read it carefully, because the platformer depends on it.
+
+Gravity is a falling speed that gets a little bigger every update:
 
 ```java
 speedY = speedY + GRAVITY;
@@ -328,12 +548,15 @@ moveVertically(speedY);
 
 ```java
 Camera camera = new Camera(Engine.getWidth(), Engine.getHeight());
-camera.setLimits(level.getWidth(), level.getHeight());   // never show outside the level
-camera.setSmoothness(0.15);                              // glide instead of jump
-camera.setDeadZone(40, 160);                             // ignore small moves, like jumps
+// never show anything outside the level
+camera.setLimits(level.getWidth(), level.getHeight());
+// move gently instead of jumping
+camera.setSmoothness(0.15);
+// ignore small movements, such as jumps
+camera.setDeadZone(40, 160);
 
 // in update():
-camera.follow(heroX + 8, heroY + 8);    // the middle of the hero
+camera.follow(heroX + 8, heroY + 8);    // follow the middle of the hero
 
 // in draw():
 camera.applyTo(canvas);
@@ -342,22 +565,28 @@ level.draw(canvas);
 canvas.resetCamera();
 ```
 
+The *dead zone* is a box in the middle of the screen. The hero can move around
+inside it without the camera moving. Without it, the whole screen would move up and
+down every time the hero jumps.
+
 ---
 
 ## 7. Bigger games: scenes and game objects
 
-With one `Game` class, everything lives in one file: fine for small games, messy
-for big ones. PGE's second way to build a game splits it up:
+With one `Game` class, all the code goes in one file. That works for small games,
+but in a big game the file gets long and hard to follow. So PGE has a second way to
+build a game, which splits it into smaller pieces:
 
-- a **`Scene`** is one screen: the menu, a level, game over;
-- a **`GameObject`** is one thing in a scene: the hero, a slime, a coin.
+- A `Scene` is one screen of the game, such as the menu, a level or the game over
+  screen.
+- A `GameObject` is one thing in a scene, such as the hero, a slime or a coin.
 
-Each object takes care of itself in its own `update()`, and the scene updates and
-draws all of them for you.
+Each object has its own `update()` method, where it takes care of itself. The scene
+updates and draws all its objects for you.
 
-**Compare `games/platformer` with `games/platformer-scenes`.** It is the same game
-written both ways. Notice how `Hero.java` contains the movement code that used to be
-in the middle of `Main.java`.
+`games/platformer` and `games/platformer-scenes` are the same game written in the
+two different ways. Compare them. For example, the code that moves the hero is in
+the middle of `Main.java` in the first one, and in `Hero.java` in the second.
 
 ### A game object
 
@@ -381,17 +610,18 @@ public class Coin extends GameObject {
 }
 ```
 
-| You want | Use |
+| You want to | Use |
 |---|---|
-| a picture | `setSprite(bitmap)` or `setAnimation(animation)`; the scene draws it |
-| to move | `move(dx, dy)`, `setPosition(x, y)`, `getX()`, `getY()` |
-| to know if two objects touch | `overlaps(other)`; make the box smaller with `setHitbox(...)` |
-| to find other objects | `getScene().find("hero")`, `getScene().findAll("slime")` |
-| to disappear | `remove()` |
-| to be drawn on top | `setDepth(10)` (higher is in front) |
+| give the object a picture | `setSprite(bitmap)` or `setAnimation(animation)`. The scene draws it for you. |
+| move it | `move(dx, dy)`, `setPosition(x, y)`, `getX()`, `getY()` |
+| check if two objects touch | `overlaps(other)`. Use `setHitbox(...)` to make the touching area smaller than the picture. |
+| find other objects | `getScene().find("hero")`, `getScene().findAll("slime")` |
+| take it out of the game | `remove()` |
+| draw it in front of others | `setDepth(10)`. Objects with a higher depth are drawn on top. |
 
-`getScene()` returns a plain `Scene`. To call your own methods, like
-`coinCollected()`, *cast* it to your scene class: `(LevelScene) getScene()`.
+`getScene()` gives you a plain `Scene`. To call methods you wrote yourself, like
+`coinCollected()`, you need to *cast* it to your own scene class first:
+`(LevelScene) getScene()`.
 
 ### A scene
 
@@ -399,7 +629,7 @@ public class Coin extends GameObject {
 public class LevelScene extends Scene {
 
     @Override
-    public void start() {                      // once: build the scene
+    public void start() {                      // runs once, to build the scene
         addLayer(TileMap.load("assets/level1.csv", tiles));
         add(new Hero(32, 300, sprites));
         add(new Coin(100, 280, sprites));
@@ -407,13 +637,13 @@ public class LevelScene extends Scene {
     }
 
     @Override
-    public void update() {                     // every update, after all objects
+    public void update() {                     // after all the objects
         getCamera().follow(hero.getCenterX(), hero.getCenterY());
     }
 }
 ```
 
-Start the game with a scene, and switch screens at any time:
+Start the game with a scene. You can switch to another scene at any time:
 
 ```java
 Engine.run(new TitleScene(), 640, 360, "My Game");
@@ -422,7 +652,8 @@ Engine.setScene(new LevelScene());
 
 ### Menus and buttons
 
-UI elements are drawn on top of everything, in screen coordinates:
+Buttons, text and other screen elements are drawn on top of everything else. They
+use screen positions, so the camera does not move them:
 
 ```java
 Button play = new Button("Play", 270, 170, 100, 24);
@@ -434,9 +665,10 @@ if (play.wasClicked()) {
 }
 ```
 
-Also available: `Box` (a panel), `Label` (text, with `setScale`, `setCentered`,
-`setShadowColor`), `Picture` (an icon, like a heart for each life). Hide and show
-any of them with `setVisible(...)`. `TitleScene.java` is a complete menu.
+There are also `Box` (a rectangle to put things on), `Label` (text, which can be
+made bigger, centred or given a shadow) and `Picture` (a small image, such as a
+heart for each life). You can hide or show any of them with `setVisible(...)`.
+`TitleScene.java` is a complete menu you can copy from.
 
 ---
 
@@ -446,141 +678,162 @@ any of them with `setVisible(...)`. `TitleScene.java` is a complete menu.
 java Build.java package mygame
 ```
 
-This makes `dist/mygame/` (and the same as `dist/mygame.zip`) with:
+This creates a folder `dist/mygame/` and a zip file `dist/mygame.zip` with the same
+contents:
 
-- `mygame.jar`: the engine and your game in one file;
-- `assets/`: your pictures and levels;
-- `run.sh` and `run.bat`: double-click (or run) these to start the game;
-- `README.txt`: how to play.
+- `mygame.jar`, which holds the engine and your game in one file
+- `assets/`, your pictures, sounds and levels
+- `run.sh` and `run.bat`, which start the game on macOS/Linux and on Windows
+- `README.txt`, which explains how to start the game
 
-The person running it needs Java 25 too. Check what your course asks for: some want
-the source code instead, which is everything in `engine/src` and `games/mygame`.
+Whoever runs the game also needs Java 25. Check what your course wants you to hand
+in. Some courses want the source code instead, which is everything in `engine/src`
+and `games/mygame`.
 
 ---
 
 ## 9. When something goes wrong
 
-When the game crashes, the window closes and the terminal shows a **stack trace**.
-Read it from the top: the first line says what went wrong, and the first line that
-mentions one of *your* files says where.
+When the game crashes, the window closes and the terminal shows a *stack trace*: a
+list of the methods that were running when the error happened. Read it from the
+top. The first line says what went wrong. The first line that mentions one of
+your own files tells you where it happened.
 
-| Message or symptom | Usual cause |
+| Message or problem | What usually causes it |
 |---|---|
-| `Could not find the image 'assets/hero.png'` | Typo in the name, or the file is not in your game's `assets` folder. Names are case-sensitive: `Hero.png` is not `hero.png`. |
-| `NullPointerException` | Something was never given a value: a `Bitmap` field you forgot to load in `init()`, or `find("hero")` with a name nobody has. |
-| `drawBitmap was given null` | Same thing: the picture was never loaded. |
-| Nothing moves | The change is in `draw()` instead of `update()`, or `update()` never reaches it (check your `if`s). |
-| It moves on its own forever | A speed that should be reset each update (like `runDistance`) is a field instead of a local variable. |
-| A jump goes down | `y` grows downward: up is negative. |
-| Things don't line up | Integer division: `7 / 2` is `3`. Use `7 / 2.0` for `3.5`. |
-| Two strings that look equal are not | Compare strings with `a.equals(b)`, never `a == b`. |
-| Animation stuck on frame one | You forgot `animation.update()` in `update()` (game objects do it for you). |
-| `is not a sound format Java understands` | The file is MP3 or OGG. Convert it to WAV (Audacity can). |
-| The game stutters when a sound plays | The sound is loaded in `update()`. Load every sound once, in `init()` or `start()`, and only `play()` it in `update()`. |
-| `Engine.setScene only works in games started with a Scene` | You started with `Engine.run(new Main(), ...)` where `Main` is a `Game`. Start with a scene instead. |
-| `Compilation failed` | The lines above it say which file and line, and what Java expected. Fix the first error first; the rest often disappear with it. |
+| `Could not find the image 'assets/hero.png'` | The name is spelled wrong, or the file is not in your game's `assets` folder. Capital letters matter: `Hero.png` is not the same as `hero.png`. |
+| `NullPointerException` | A variable was never given a value. For example, you forgot to load a picture in `init()`, or you called `find("hero")` but no object has that name. |
+| `drawBitmap was given null` | The picture was never loaded. |
+| Nothing moves | You changed the position in `draw()` instead of `update()`, or an `if` in `update()` stops the code from running. |
+| Something keeps moving by itself | A value that should start again at zero every update (like `runDistance`) is a field instead of a local variable. |
+| A jump goes down instead of up | `y` gets bigger going down, so up means a negative speed. |
+| Things are in slightly the wrong place | Dividing two `int`s throws away the remainder: `7 / 2` is `3`. Write `7 / 2.0` to get `3.5`. |
+| Two strings look the same but are not equal | Compare strings with `a.equals(b)`, not `a == b`. |
+| The animation shows only its first picture | You forgot to call `animation.update()` in `update()`. (Game objects do this for you.) |
+| `is not a sound format Java understands` | The file is MP3 or OGG. Convert it to WAV, for example with Audacity. |
+| The game freezes for a moment when a sound plays | The sound is being loaded in `update()`. Load each sound once in `init()` or `start()`, and only call `play()` in `update()`. |
+| `Engine.setScene only works in games started with a Scene` | Your game started with `Engine.run(new Main(), ...)`, and `Main` is a `Game`, not a `Scene`. Start the game with a scene instead. |
+| `Compilation failed` | The lines above this message show the file, the line number and what Java expected. Fix the first error first, because it often causes the others. |
 
 ---
 
 ## 10. Inside the engine
 
-The whole engine is in `engine/src/pge`, about 4,000 lines, much of it comments. Read
-it in this order:
+The engine is in `engine/src/pge`. It is about 4,000 lines long, and a lot of that
+is comments. If you want to read it, this order works well:
 
-| File | What it teaches |
+| File | What you will learn from it |
 |---|---|
-| `Game.java` | the three-method contract |
-| `Engine.java` | the game loop: fixed time steps, catching up, measuring time |
-| `gfx/Canvas.java` | how every drawing is just writing numbers into an array; Bresenham lines, midpoint circles, clipping |
-| `gfx/Color.java` | colors as numbers; bit shifting |
-| `gfx/Bitmap.java`, `SpriteSheet.java` | images as arrays; loading PNGs; cutting a sheet into cells |
-| `gfx/Font.java` | a font is just a sprite sheet; measuring letter widths |
-| `input/Input.java` | two threads sharing data safely; "pressed this update" from "down now" and "down before" |
-| `Window.java` | the only place pixels meet the screen: one image, scaled, shown 60 times per second |
-| `world/TileMap.java` | 2D grids stored in 1D arrays; pixels to tiles; drawing only what's visible |
-| `world/Camera.java` | smoothing, dead zones, limits: small formulas with a big effect |
-| `scene/Scene.java`, `GameObject.java`, `SceneRunner.java` | object-oriented design; lists that change while you loop over them; insertion sort |
-| `ui/*.java` | abstract classes and inheritance: every element is a `UIElement` |
-| `audio/Synth.java` | sound as numbers: waves, frequencies, notes as powers of two |
-| `audio/Sound.java` | the JDK's Clips; decibels; a small pool of "voices"; failing gracefully |
+| `Game.java` | the three methods every game has |
+| `Engine.java` | the game loop: running updates at a fixed speed and measuring time |
+| `gfx/Canvas.java` | how drawing works: every shape is just numbers written into an array. Includes the classic algorithms for drawing lines and circles. |
+| `gfx/Color.java` | how a colour is stored in one `int` |
+| `gfx/Bitmap.java`, `SpriteSheet.java` | how pictures are stored and loaded, and how a sprite sheet is cut into pieces |
+| `gfx/Font.java` | how a font is just another sprite sheet |
+| `input/Input.java` | how the engine knows a key was "pressed just now", and how two threads share data safely |
+| `Window.java` | the one place where our pixels reach the screen |
+| `world/TileMap.java` | how a grid is stored in a normal array, and how the map draws only the tiles you can see |
+| `world/Camera.java` | the small formulas behind smooth camera movement |
+| `scene/Scene.java`, `GameObject.java`, `SceneRunner.java` | how objects are organised, and how to change a list safely while you are looping over it |
+| `ui/*.java` | inheritance and abstract classes: every screen element is a kind of `UIElement` |
+| `audio/Synth.java` | how sound is made from numbers, and how note names become frequencies |
+| `audio/Sound.java` | how Java plays sound, and what the engine does when there is no sound device |
 
-### One frame, from start to finish
+### What happens in one frame
 
-1. `Engine` decides it is time for an update.
-2. `Input.update()` copies what the keyboard and mouse did since last time.
-3. Your `update()` runs (or, with scenes: the UI, every object, then the scene).
-4. Your `draw(canvas)` runs: every drawing call writes colors into `int[] pixels`.
-5. `Window.present()` shows that array, scaled up, in the window.
+1. `Engine` checks whether it is time for the next update.
+2. `Input.update()` records what the keyboard and mouse did since the last update.
+3. Your `update()` runs. In a game with scenes, the buttons update first, then
+   every object, then the scene.
+4. Your `draw(canvas)` runs. Every drawing method writes colours into an array of
+   `int`s called `pixels`.
+5. `Window.present()` shows that array in the window, made bigger to fit.
 
-The picture you see is literally an array of 230,400 numbers (640 x 360), and every
-pixel of it was put there by Java code you can read.
+So the picture on the screen is an array of 230,400 numbers (640 x 360). Every one
+of them was written there by Java code you can read.
 
 ---
 
 ## 11. Extending the engine
 
-The best way to understand the engine is to change it. These exercises go from
-small to big. For each: where to start, and a hint.
+The best way to understand the engine is to change it. The exercises below go from
+small to big. Each one tells you where to start and gives you a hint.
 
-When you add to the engine, keep its style: plain classes, private fields with
-getters and setters, comments that explain *why*, error messages a beginner can
-understand. Run `java Build.java` after every change: it compiles the engine with all
-warnings on.
+When you add something to the engine, write it in the same style as the rest:
+simple classes, private fields with getters and setters, comments that explain
+*why* the code does what it does, and error messages a beginner can understand.
+Run `java Build.java` after every change. It compiles the engine and reports any
+warnings.
 
 ### Warm-ups
 
-- **New palette colors.** `gfx/Color.java`. Pick names, add constants.
-- **`drawTriangle` / `fillTriangle`.** `gfx/Canvas.java`. Hint: an outline is three
-  `drawLine` calls. Filling: for each row, find where the edges cross it, then
-  `fillSpan`.
-- **Accented letters.** `tools/MakeAssets.java` draws the font. Add a row of glyphs
-  for `á é í ó ú ã õ ç`, then teach `Font.java` where to find them (now only codes
-  32 to 127 are mapped).
-- **A pause key.** In your game: when P is pressed, skip everything in `update()`
-  except checking P again. Show "PAUSED" in `draw()`.
+- More colours. In `gfx/Color.java`, choose some names and add them as constants.
+- Triangles. Add `drawTriangle` and `fillTriangle` to `gfx/Canvas.java`. An
+  outline is three calls to `drawLine`. To fill it, go through the triangle one
+  row at a time, work out where the edges cross that row, and fill the part in
+  between with `fillSpan`.
+- Accented letters. The font is drawn by `tools/MakeAssets.java`. Add a row of
+  letters for `á é í ó ú ã õ ç`, then change `Font.java` so it can find them. At the
+  moment it only knows the characters with codes 32 to 127.
+- A pause key. In your game, when P is pressed, skip everything in `update()`
+  except the check for P. Show "PAUSED" in `draw()`.
 
 ### Medium
 
-- **Camera shake.** `world/Camera.java`. Add `shake(strength, updates)`; while
-  shaking, `getX()` and `getY()` add a small random offset. Great for explosions.
-- **Scaled sprites.** `drawBitmap(bitmap, x, y, scale)` in `Canvas.java`. Hint: like
-  `drawText` with a scale: each source pixel becomes a `scale x scale` square.
-- **Particles.** A `Particle extends GameObject` with a speed, gravity and a timer
-  that calls `remove()` at zero. Spawn 20 when a slime is stomped.
-- **High score file.** Save with `Files.writeString(Path.of("highscore.txt"), "" + score)`,
-  read it back with `Files.readString(...)` and `Integer.parseInt(...)`. What if the
-  file does not exist yet?
-- **Moving platforms.** A `GameObject` that moves back and forth. The hard part:
-  the hero should ride on it. Hint: if the hero stands on it, move the hero by the
-  same amount.
+- Camera shake. In `world/Camera.java`, add a method `shake(strength, updates)`.
+  While the camera is shaking, `getX()` and `getY()` add a small random number.
+  It looks great for explosions.
+- Bigger sprites. Add `drawBitmap(bitmap, x, y, scale)` to `Canvas.java`. Look at
+  how `drawText` does it: every pixel of the picture becomes a square of
+  `scale` by `scale` pixels.
+- Particles. Make a class `Particle extends GameObject` with a speed, gravity and a
+  timer. When the timer reaches zero, the particle calls `remove()`. Create 20
+  particles when a slime is stomped.
+- A high score. Save it with `Files.writeString(Path.of("highscore.txt"), "" + score)`.
+  Read it back with `Files.readString(...)` and `Integer.parseInt(...)`. Think about
+  what should happen the first time, when the file does not exist yet.
+- Moving platforms. Make a `GameObject` that moves back and forth. The hard part is
+  that the hero should ride along on it. Hint: if the hero is standing on the
+  platform, move the hero by the same amount as the platform.
 
 ### Sound
 
-- **Fading music.** Add `fadeTo(volume, updates)` to `Sound`: change the volume a
-  little every update until it gets there. Fade the music out on Game Over.
-- **Volume by distance.** A slime's sound should be quieter when it is far from the
-  hero. Compute the distance, turn it into a volume between 0 and 1.
-- **Random pitch.** The same jump sound gets tiring. Make `Synth` versions a little
-  higher or lower each time. Harder, for loaded files: play the samples faster or
-  slower by reading every 1.1th sample instead of every one (this is *resampling*).
-- **Stereo.** Sounds are mono now. Make `Sound.fromSamples` take a left and a right
-  array (2 channels), and a `pan` from -1 (left) to 1 (right).
-- **A tiny tracker.** Write music as text, one line per step, like `C4 E5 -`, and
-  turn it into samples with `Synth`, the way `MakeSounds.music()` does with arrays.
-- **Long music.** A Clip holds the whole sound in memory: fine for a minute, wasteful
-  for ten. `javax.sound.sampled.SourceDataLine` plays a sound while reading it from
-  the file, bit by bit, on its own thread.
+- Fading music. Add `fadeTo(volume, updates)` to `Sound`. It changes the volume a
+  little in every update until it reaches the new volume. Use it to fade the music
+  out on the game over screen.
+- Volume by distance. A slime should sound quieter when it is far away from the
+  hero. Work out the distance between them, and turn it into a volume between 0
+  and 1.
+- Different pitches. Hearing exactly the same jump sound every time gets boring.
+  Make a few `Synth` versions that are slightly higher or lower, and pick one at
+  random. For sounds loaded from files it is harder: you have to play the numbers
+  a little faster or slower, for example by reading every 1.1th number instead of
+  every one.
+- Left and right speakers. At the moment every sound comes equally out of both
+  speakers. Change `Sound.fromSamples` so it takes two arrays, one for the left
+  speaker and one for the right. Then add a `pan` setting from -1 (left only) to 1
+  (right only).
+- Music written as text. Write a tune as text, one step per line, like `C4 E5 -`.
+  Then turn it into sound with `Synth`, the way `MakeSounds.music()` does with
+  arrays.
+- Long music. A `Sound` keeps the whole recording in memory. That is fine for a
+  minute of music, but wasteful for ten. `javax.sound.sampled.SourceDataLine` can
+  play a file while it is still reading it, a little at a time. It needs its own
+  thread.
 
 ### Bigger
 
-- **Semi-transparency.** Now a pixel is either drawn or not. Keep the PNG's alpha
-  (0-255) in `Bitmap`, and in `Canvas.drawBitmap` mix the colors:
-  `result = (source * alpha + destination * (255 - alpha)) / 255`, for red, green and
-  blue separately. Then measure with F3 how much slower it is.
-- **Animated tiles.** Water that ripples: let `TileMap` know that some tile numbers
-  are animations, and draw the current frame instead.
-- **Rotation.** `drawBitmapRotated(bitmap, x, y, angle)`. Hint: go through every
-  pixel of the *destination* area, rotate its position backwards, and see which
-  source pixel lands there. Doing it the other way around leaves holes. Why?
-- **Tiled's own format.** Tiled saves `.tmx` files (XML) with all layers and
-  objects in one file. Java can read XML with `javax.xml.parsers`.
+- See-through colours. At the moment a pixel is either drawn or not drawn. Keep the
+  PNG's transparency value (0 to 255, called *alpha*) in `Bitmap`. Then, in
+  `Canvas.drawBitmap`, mix the two colours with
+  `result = (source * alpha + destination * (255 - alpha)) / 255`, separately for
+  red, green and blue. Use F3 to measure how much slower it gets.
+- Animated tiles, like water with moving waves. Tell `TileMap` that some tile
+  numbers are animations, and draw the current picture of the animation instead.
+- Rotation. Add `drawBitmapRotated(bitmap, x, y, angle)`. Hint: go through every
+  pixel of the area on the screen, turn its position backwards by the angle, and
+  look up which pixel of the picture lands there. If you do it the other way round
+  (turning each picture pixel forwards), you get holes. Try to work out why.
+- Tiled's own file format. Tiled can also save `.tmx` files, which keep all the
+  layers and objects of a level in one XML file. Java can read XML with
+  `javax.xml.parsers`.

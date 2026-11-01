@@ -20,28 +20,39 @@ import pge.input.Input;
 /**
  * The window the game appears in.
  *
- * This is one of the few PGE files that use the JDK's window classes (AWT). It does
- * three things:
+ * This is one of the few PGE files that use Java's window classes. They come from AWT,
+ * the "Abstract Window Toolkit", which has been part of Java since its first version
+ * in 1996. (Swing, Java's better-known set of buttons and menus, is built on top of
+ * AWT.) This class does three things:
  *
- *   1. Opens a window (or goes fullscreen).
- *   2. Owns the pixel array that pge.gfx.Canvas draws into.
- *   3. Once per frame, shows that array in the window, scaled up to fill it (present()).
+ *   1. It opens a window, or switches to fullscreen.
+ *   2. It owns the array of pixels that pge.gfx.Canvas draws into.
+ *   3. Once per frame, present() shows that array in the window, made bigger to fill it.
  *
- * The trick in step 2: we create a BufferedImage (a JDK image) and ask for the int[]
- * array inside it. The Canvas writes directly into that same array, so there is
- * nothing to copy: when present() shows the image, it already holds the new frame.
+ * How step 2 works: we create a BufferedImage, which is Java's class for a picture
+ * kept in memory, and ask it for the int[] array where it stores its colours. The
+ * Canvas writes straight into that same array. So when present() shows the image,
+ * the new frame is already in it, and nothing needs to be copied.
+ *
+ * The class has no "public" in front of it, so only classes in the package pge can
+ * use it. Games never need to; they go through Engine instead.
  */
 class Window {
 
-    /** Space kept free for the title bar and the dock or taskbar when choosing the starting size. */
+    /**
+     * Space left free for the title bar and the dock or taskbar when choosing how big
+     * the window starts.
+     */
     private static final int TITLE_BAR_ROOM = 64;
 
     private final int gameWidth;
     private final int gameHeight;
 
+    // A Frame is AWT's name for a normal window with a title bar and a close button.
     private final Frame frame;
-    // AWT has its own class called Canvas. To avoid confusing it with PGE's pge.gfx.Canvas,
-    // we always write its full name and call our variable "surface".
+    // AWT has its own class called Canvas: an empty area inside a window that a program
+    // can draw on. To avoid mixing it up with PGE's pge.gfx.Canvas, we always write its
+    // full name, java.awt.Canvas, and call our variable "surface".
     private final java.awt.Canvas surface;
 
     private final BufferedImage image;
@@ -49,16 +60,20 @@ class Window {
     private BufferStrategy strategy;
 
     private boolean fullscreen = false;
-    private Rectangle windowedBounds;
+    private Rectangle windowedBounds;    // where the window was before going fullscreen
 
-    // Set on the event thread, read on the engine thread. "volatile" makes sure the
-    // engine thread sees the change immediately.
+    // This flag is set by Java's event thread (when the close button is clicked) and
+    // read by the thread that runs the game loop. Normally a thread is allowed to keep
+    // its own copy of a variable for speed, and might not notice another thread's
+    // change for a while. "volatile" tells Java not to do that for this variable, so
+    // the game loop sees the change straight away.
     private volatile boolean closeRequested = false;
 
     Window(String title, int gameWidth, int gameHeight) {
         this.gameWidth = gameWidth;
         this.gameHeight = gameHeight;
 
+        // TYPE_INT_RGB stores each pixel as one int, 0xRRGGBB: the same format as our colours.
         image = new BufferedImage(gameWidth, gameHeight, BufferedImage.TYPE_INT_RGB);
         pixels = ((DataBufferInt) image.getRaster().getDataBuffer()).getData();
 
@@ -66,15 +81,18 @@ class Window {
         surface = new java.awt.Canvas();
         surface.setPreferredSize(new Dimension(gameWidth * scale, gameHeight * scale));
         surface.setBackground(java.awt.Color.BLACK);
-        surface.setIgnoreRepaint(true);   // we draw it ourselves, every frame
+        // Normally AWT redraws a window whenever it thinks it needs it (for example after
+        // another window was on top of it). We draw a new frame 60 times a second anyway,
+        // so we tell it not to bother.
+        surface.setIgnoreRepaint(true);
 
         frame = new Frame(title);
         frame.setBackground(java.awt.Color.BLACK);
         frame.setIgnoreRepaint(true);
         frame.add(surface);
         frame.addWindowListener(new WindowEvents());
-        frame.pack();
-        frame.setLocationRelativeTo(null);   // center on screen
+        frame.pack();                        // make the window just big enough for the surface
+        frame.setLocationRelativeTo(null);   // null means: centre it on the screen
         frame.setVisible(true);
 
         Input.attachTo(surface);
@@ -99,18 +117,22 @@ class Window {
     }
 
     /**
-     * Shows the current frame: paints the window black, then draws the game image
-     * as large as possible in the middle.
+     * Shows the current frame: paints the window black, then draws the game picture as
+     * big as possible in the middle.
      *
-     * We prefer whole-number scales (2x, 3x, 4x...) so every game pixel becomes a
-     * perfect square of screen pixels. Only if the window is smaller than the game
-     * do we shrink it by a fraction.
+     * We make the picture bigger by a whole number (2, 3, 4...), so every game pixel
+     * becomes a perfect square of screen pixels. A scale of 2.5 would make some game
+     * pixels 2 screen pixels wide and others 3, and pixel art would look uneven. Space
+     * that is left over becomes black bars around the picture. Films do the same when
+     * a wide film is shown on a narrower screen, which is why this is called
+     * "letterboxing". Only when the window is smaller than the game picture do we
+     * shrink it by a fraction.
      */
     void present() {
         int windowWidth = surface.getWidth();
         int windowHeight = surface.getHeight();
         if (windowWidth <= 0 || windowHeight <= 0) {
-            return;   // minimized, nothing to show
+            return;   // the window is minimized: there is nothing to show
         }
 
         int scale = Math.min(windowWidth / gameWidth, windowHeight / gameHeight);
@@ -130,30 +152,40 @@ class Window {
         // Input needs to know where the picture is, to turn mouse positions into game positions.
         Input.setScreenArea(left, top, drawWidth, drawHeight, gameWidth, gameHeight);
 
-        // A BufferStrategy draws into a hidden buffer, then show() swaps it onto the
-        // screen in one go, so the player never sees a half-drawn frame. The two loops
-        // are the JDK's recommended way to handle the rare case where that hidden
-        // buffer gets lost (for example when the screen mode changes).
+        // "Double buffering": we draw into a hidden copy of the window (the back
+        // buffer), and show() then swaps it with the visible one in one go. Drawing
+        // straight onto the visible window would let the player see a half-finished
+        // frame, which shows up as flickering or as a "tear" line across the picture.
+        // The two do-while loops are the pattern Java's documentation recommends for
+        // BufferStrategy: they draw the frame again in the rare case that the hidden
+        // buffer's memory was lost, for example when the screen mode changed.
         do {
             do {
                 Graphics graphics = strategy.getDrawGraphics();
                 graphics.setColor(java.awt.Color.BLACK);
                 graphics.fillRect(0, 0, windowWidth, windowHeight);
-                // Scale with "nearest neighbor": each game pixel becomes a crisp
-                // square instead of a blurry blend of its neighbors.
+                // When a picture is made bigger, the computer must decide what colour
+                // the new in-between pixels get. "Nearest neighbour" simply copies the
+                // closest original pixel, so each game pixel becomes a sharp square.
+                // The other choices blend neighbouring colours, which looks smooth for
+                // photos but makes pixel art blurry.
                 ((Graphics2D) graphics).setRenderingHint(RenderingHints.KEY_INTERPOLATION,
                         RenderingHints.VALUE_INTERPOLATION_NEAREST_NEIGHBOR);
                 graphics.drawImage(image, left, top, drawWidth, drawHeight, null);
-                graphics.dispose();
+                graphics.dispose();    // free the drawing tools we were given
             } while (strategy.contentsRestored());
             strategy.show();
         } while (strategy.contentsLost());
 
-        // On Linux, this makes sure the frame really reaches the screen now.
+        // On Linux, AWT can hold drawing commands back and send them to the screen
+        // later in a batch. sync() sends them now, so the frame appears on time.
         Toolkit.getDefaultToolkit().sync();
     }
 
-    /** Switches between a normal window and fullscreen. */
+    /**
+     * Switches between a normal window and fullscreen, using the "full-screen
+     * exclusive mode" that Java has offered since version 1.4.
+     */
     void setFullscreen(boolean on) {
         if (on == fullscreen) {
             return;
@@ -161,7 +193,10 @@ class Window {
         GraphicsDevice screen = frame.getGraphicsConfiguration().getDevice();
         if (on) {
             windowedBounds = frame.getBounds();
-            frame.dispose();                 // the title bar can only be removed while the window is closed
+            // A fullscreen window should have no title bar. AWT only lets us remove the
+            // title bar (the "decorations") while the window is closed, so we close it
+            // with dispose(), change it, and let setFullScreenWindow open it again.
+            frame.dispose();
             frame.setUndecorated(true);
             screen.setFullScreenWindow(frame);
         } else {
@@ -172,7 +207,7 @@ class Window {
             frame.setVisible(true);
         }
         fullscreen = on;
-        createStrategy();                    // the old one was thrown away by dispose()
+        createStrategy();    // dispose() also threw away the old buffers, so we need new ones
     }
 
     void close() {
@@ -182,7 +217,11 @@ class Window {
         frame.dispose();
     }
 
-    /** The biggest whole-number scale at which the game still fits on the screen. */
+    /**
+     * The biggest whole-number scale at which the game still fits on the screen.
+     * getMaximumWindowBounds() gives the part of the screen that windows may use,
+     * which leaves out the macOS menu bar and the Windows taskbar.
+     */
     private int startingScale() {
         Rectangle usable = GraphicsEnvironment.getLocalGraphicsEnvironment().getMaximumWindowBounds();
         int scale = Math.min(usable.width / gameWidth, (usable.height - TITLE_BAR_ROOM) / gameHeight);
@@ -192,24 +231,34 @@ class Window {
         return scale;
     }
 
-    /** Two buffers: one on screen, one hidden that we draw into. */
+    /**
+     * Creates the two buffers for double buffering: the one on screen and the hidden
+     * one we draw into. Then asks for keyboard focus, so key presses come to us.
+     */
     private void createStrategy() {
         surface.createBufferStrategy(2);
         strategy = surface.getBufferStrategy();
         surface.requestFocus();
     }
 
-    /** Receives window events from the JDK. */
+    /**
+     * Receives window events from Java. WindowAdapter is a class that has an empty
+     * method for every kind of window event, so we only write the ones we need.
+     *
+     * This class is written inside Window (an "inner class"), so it can use Window's
+     * fields, such as closeRequested and surface.
+     */
     private class WindowEvents extends WindowAdapter {
 
+        /** The close button was clicked. The game loop sees the flag and ends the game. */
         @Override
         public void windowClosing(WindowEvent event) {
             closeRequested = true;
         }
 
+        /** The window became the active window again: make sure key presses come to the game. */
         @Override
         public void windowActivated(WindowEvent event) {
-            // Make sure key presses go to the game.
             surface.requestFocus();
         }
     }

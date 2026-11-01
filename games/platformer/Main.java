@@ -31,14 +31,21 @@ public class Main implements Game {
     static final int STONE = 3;
     static final int COIN_MARKER = 7;
 
-    // How the hero moves, in pixels per update (and per update, per update, for gravity)
+    // How the hero moves. Speeds are in pixels per update. GRAVITY is how much the
+    // falling speed grows every update: a speed that keeps growing is an acceleration,
+    // which is exactly what gravity is in real life. Change these numbers to change how
+    // the game feels; tuning them is a big part of making a platformer fun.
     static final double RUN_SPEED = 2.0;
     static final double JUMP_SPEED = -7.5;      // negative is up; reaches about 4.5 tiles high
     static final double SHORT_JUMP_SPEED = -2.5;
     static final double GRAVITY = 0.35;
+    // Without a limit, a long fall would get faster and faster until the hero moved
+    // through several tiles per update. Real falling objects also stop speeding up at
+    // some point, because of air resistance; that top speed is called "terminal velocity".
     static final double MAX_FALL_SPEED = 6.0;
 
-    // The hero's sprite is 16x16, but its body is smaller. This box is what touches walls.
+    // The hero's picture is 16x16, but its body is smaller. This box (the "hitbox") is
+    // what touches walls and coins, measured from the picture's top-left corner.
     static final int HITBOX_LEFT = 3;
     static final int HITBOX_TOP = 3;
     static final int HITBOX_WIDTH = 10;
@@ -137,6 +144,10 @@ public class Main implements Game {
         moveHorizontally(runDistance);
 
         // ---- Jumping: only from the ground. Letting go early makes a shorter jump.
+        // To check for ground, we ask whether the hero would hit a wall one pixel lower.
+        // The short jump works by cutting the upward speed when the key is let go.
+        // Super Mario Bros. (1985) made this "hold to jump higher" control famous,
+        // and most platformers since have worked this way.
         heroOnGround = hitsWall(heroX, heroY + 1);
         boolean jumpHeld = Input.isDown(Key.SPACE) || Input.isDown(Key.UP) || Input.isDown(Key.W);
         boolean jumpPressed = Input.wasPressed(Key.SPACE) || Input.wasPressed(Key.UP) || Input.wasPressed(Key.W);
@@ -147,7 +158,7 @@ public class Main implements Game {
             heroSpeedY = SHORT_JUMP_SPEED;
         }
 
-        // ---- Falling
+        // ---- Falling: gravity makes the falling speed a little bigger every update
         heroSpeedY = Math.min(heroSpeedY + GRAVITY, MAX_FALL_SPEED);
         moveVertically(heroSpeedY);
 
@@ -175,6 +186,12 @@ public class Main implements Game {
      *
      * We move at most one pixel at a time and check for a wall before each step.
      * That way the hero always stops exactly against the wall, even at high speed.
+     * Moving the whole distance at once and then checking could carry the hero into
+     * the wall, or even through a thin wall to the other side.
+     *
+     * Moving left-right and up-down separately (in two methods) matters too: when the
+     * hero runs into a wall while falling, the sideways move stops but the fall goes on,
+     * so the hero slides down the wall instead of sticking to it.
      */
     void moveHorizontally(double distance) {
         double remaining = Math.abs(distance);
@@ -261,8 +278,13 @@ public class Main implements Game {
 
     /**
      * Two rows of hills that scroll slower than the level, so they seem far away.
-     * This trick is called parallax: the far row moves at 1/4 of the camera's
-     * speed, the near row at 1/2.
+     *
+     * Looking out of a train window, nearby trees rush past while distant mountains
+     * hardly move. That difference is called "parallax", and it is one of the ways our
+     * eyes judge distance. Games copy it to make a flat picture feel deep: here the far
+     * row of hills moves at 1/4 of the camera's speed and the near row at 1/2. Arcade
+     * games of the early 1980s, such as Moon Patrol (1982), were among the first to
+     * use this "parallax scrolling".
      */
     void drawHills(Canvas canvas) {
         canvas.setCamera(camera.getX() / 4, camera.getY() / 4);
@@ -284,7 +306,7 @@ public class Main implements Game {
         canvas.drawText(text, 26, 12, Color.WHITE);
     }
 
-    /** Text centered left-to-right, with a dark shadow. */
+    /** Text centred left-to-right, with a dark shadow. */
     void drawCentered(Canvas canvas, String text, int y, int color, int scale) {
         int x = (canvas.getWidth() - canvas.getTextWidth(text, scale)) / 2;
         canvas.drawText(text, x + scale, y + scale, Color.BLACK, scale);
