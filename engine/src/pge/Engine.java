@@ -1,6 +1,7 @@
 package pge;
 
 import pge.gfx.Canvas;
+import pge.gfx.Color;
 import pge.input.Input;
 import pge.input.Key;
 
@@ -17,7 +18,7 @@ import pge.input.Key;
  *
  * Built-in keys, available in every game:
  *   F11, or Alt+Enter (Option+Enter on a Mac)   toggle fullscreen
- *   F3                                           show speed statistics in the title bar
+ *   F3                                           show speed statistics on screen
  *
  * THE GAME LOOP
  * The heart of every game engine. Ours runs update() exactly 60 times per second,
@@ -172,6 +173,9 @@ public final class Engine {
             long drawStart = System.nanoTime();
             canvas.resetCamera();
             game.draw(canvas);
+            if (showStats) {
+                drawStats();
+            }
             window.present();
             drawNanos = drawNanos + (System.nanoTime() - drawStart);
             frames = frames + 1;
@@ -181,9 +185,6 @@ public final class Engine {
                 framesPerSecond = frames;
                 updateMillis = updateNanos / 1000000.0 / Math.max(updates, 1);
                 drawMillis = drawNanos / 1000000.0 / Math.max(frames, 1);
-                if (showStats) {
-                    window.setTitle(statsText());
-                }
                 statsStart = System.nanoTime();
                 frames = 0;
                 updates = 0;
@@ -201,17 +202,24 @@ public final class Engine {
         }
         if (Input.wasPressed(Key.F3)) {
             showStats = !showStats;
-            if (showStats) {
-                window.setTitle(statsText());
-            } else {
-                window.setTitle(title);
-            }
         }
     }
 
-    private static String statsText() {
-        return String.format("%s  |  %d fps  |  update %.2f ms  |  draw %.2f ms",
-                title, framesPerSecond, updateMillis, drawMillis);
+    /**
+     * The F3 overlay, in the top-right corner. One frame at 60 fps may take 16.7 ms
+     * in total; "update" and "draw" show how much of that the game is using.
+     */
+    private static void drawStats() {
+        String text = String.format("%d FPS\nupdate %.2f ms\ndraw   %.2f ms",
+                framesPerSecond, updateMillis, drawMillis);
+        int boxWidth = canvas.getTextWidth(text) + 8;
+        int boxHeight = canvas.getTextHeight(text) + 8;
+        int left = canvas.getWidth() - boxWidth - 4;
+        int top = 4;
+        canvas.resetCamera();
+        canvas.fillRect(left, top, boxWidth, boxHeight, Color.BLACK);
+        canvas.drawRect(left, top, boxWidth, boxHeight, Color.GRAY);
+        canvas.drawText(text, left + 4, top + 4, Color.GREEN);
     }
 
     /**

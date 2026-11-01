@@ -33,6 +33,8 @@ public class Canvas {
     private int cameraX = 0;
     private int cameraY = 0;
 
+    private Font font = null;    // null means "the default font", loaded when first needed
+
     /**
      * Wraps an existing pixel array. The engine creates the canvas for you;
      * you only need this constructor if you want an extra off-screen canvas.
@@ -230,6 +232,138 @@ public class Canvas {
                 error = error + 2 * (y - x) + 1;
             }
         }
+    }
+
+    // ------------------------------------------------------------------ bitmaps
+
+    /** Draws a bitmap with its top-left corner at (x, y). Transparent pixels are skipped. */
+    public void drawBitmap(Bitmap bitmap, int x, int y) {
+        drawBitmap(bitmap, x, y, false, false);
+    }
+
+    /**
+     * Draws a bitmap, optionally mirrored. flipX mirrors left-right (a character
+     * turning around), flipY mirrors upside-down.
+     */
+    public void drawBitmap(Bitmap bitmap, int x, int y, boolean flipX, boolean flipY) {
+        if (bitmap == null) {
+            throw new IllegalArgumentException("drawBitmap was given null instead of a bitmap. Was it loaded?");
+        }
+        int left = x - cameraX;
+        int top = y - cameraY;
+        int bitmapWidth = bitmap.getWidth();
+        int bitmapHeight = bitmap.getHeight();
+
+        for (int row = 0; row < bitmapHeight; row++) {
+            int screenY = top + row;
+            if (screenY < 0 || screenY >= height) {
+                continue;    // this whole row is off the canvas
+            }
+            int sourceRow = row;
+            if (flipY) {
+                sourceRow = bitmapHeight - 1 - row;
+            }
+            for (int col = 0; col < bitmapWidth; col++) {
+                int screenX = left + col;
+                if (screenX < 0 || screenX >= width) {
+                    continue;    // this pixel is off the canvas
+                }
+                int sourceCol = col;
+                if (flipX) {
+                    sourceCol = bitmapWidth - 1 - col;
+                }
+                int color = bitmap.getPixel(sourceCol, sourceRow);
+                if (!Color.isTransparent(color)) {
+                    pixels[screenY * width + screenX] = color;
+                }
+            }
+        }
+    }
+
+    /**
+     * Draws only the shape of a bitmap, every visible pixel in one color.
+     * Handy for making a character flash white when hit, or for shadows.
+     */
+    public void drawSilhouette(Bitmap bitmap, int x, int y, boolean flipX, int color) {
+        if (bitmap == null) {
+            throw new IllegalArgumentException("drawSilhouette was given null instead of a bitmap. Was it loaded?");
+        }
+        for (int row = 0; row < bitmap.getHeight(); row++) {
+            for (int col = 0; col < bitmap.getWidth(); col++) {
+                int sourceCol = col;
+                if (flipX) {
+                    sourceCol = bitmap.getWidth() - 1 - col;
+                }
+                if (!Color.isTransparent(bitmap.getPixel(sourceCol, row))) {
+                    setPixel(x + col, y + row, color);
+                }
+            }
+        }
+    }
+
+    // ------------------------------------------------------------------ text
+
+    /** Writes text with its top-left corner at (x, y). "\n" starts a new line. */
+    public void drawText(String text, int x, int y, int color) {
+        drawText(text, x, y, color, 1);
+    }
+
+    /**
+     * Writes text made bigger: scale 2 turns every pixel of every letter into a
+     * 2x2 square, scale 3 into a 3x3 square, and so on. Good for titles.
+     */
+    public void drawText(String text, int x, int y, int color, int scale) {
+        Font currentFont = getFont();
+        int cursorX = x;
+        int cursorY = y;
+        for (int i = 0; i < text.length(); i++) {
+            char c = text.charAt(i);
+            if (c == '\r') {
+                continue;    // part of a Windows line ending; the '\n' after it does the work
+            }
+            if (c == '\n') {
+                cursorX = x;
+                cursorY = cursorY + currentFont.getLineHeight() * scale;
+                continue;
+            }
+            Bitmap glyph = currentFont.getGlyph(c);
+            for (int row = 0; row < glyph.getHeight(); row++) {
+                for (int col = 0; col < glyph.getWidth(); col++) {
+                    if (!Color.isTransparent(glyph.getPixel(col, row))) {
+                        fillRect(cursorX + col * scale, cursorY + row * scale, scale, scale, color);
+                    }
+                }
+            }
+            cursorX = cursorX + currentFont.getAdvance(c) * scale;
+        }
+    }
+
+    /** How many pixels wide this text would be. Useful for centering it. */
+    public int getTextWidth(String text) {
+        return getFont().getTextWidth(text);
+    }
+
+    /** How many pixels wide this text would be at this scale. */
+    public int getTextWidth(String text, int scale) {
+        return getFont().getTextWidth(text) * scale;
+    }
+
+    /** How many pixels tall this text would be. */
+    public int getTextHeight(String text) {
+        return getFont().getTextHeight(text);
+    }
+
+    /** The font used by drawText. */
+    public Font getFont() {
+        if (font == null) {
+            font = Font.getDefault();
+        }
+        return font;
+    }
+
+    /** Changes the font used by drawText from now on. */
+    public void setFont(Font font) {
+        this.font = font;
     }
 
     // ------------------------------------------------------------------ helpers

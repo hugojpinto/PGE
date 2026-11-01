@@ -1,19 +1,22 @@
 import pge.Engine;
 import pge.Game;
+import pge.gfx.Animation;
+import pge.gfx.Bitmap;
 import pge.gfx.Canvas;
 import pge.gfx.Color;
+import pge.gfx.SpriteSheet;
 import pge.input.Input;
 import pge.input.Key;
 
 /**
- * M0 demo: a world bigger than the screen, a camera that follows the player,
- * and a little screen-space UI on top.
+ * PGE demo: walk around a world bigger than the screen and collect every coin.
  *
  *   Arrows or WASD   move
- *   Space            change color
+ *   Space            flash
+ *   R                restart
  *   Escape           quit
  *   F11 / Alt+Enter  fullscreen
- *   F3               speed statistics in the title bar
+ *   F3               speed statistics
  */
 public class Main implements Game {
 
@@ -21,23 +24,31 @@ public class Main implements Game {
     static final int WORLD_HEIGHT = 1200;
     static final int GRID_SIZE = 100;
     static final int STAR_COUNT = 400;
+    static final int COIN_COUNT = 30;
+    static final int SPRITE_SIZE = 16;
+    static final int FLASH_UPDATES = 12;
 
-    // The player
-    double playerX = 300;
-    double playerY = 200;
-    double playerSpeed = 3;
-    int playerSize = 16;
-    int[] playerColors = { Color.YELLOW, Color.GREEN, Color.PINK, Color.CYAN };
-    int colorIndex = 0;
+    // Pictures
+    SpriteSheet sheet;
+    Animation heroWalk;
+    Animation coinSpin;
+    Bitmap heart;
 
-    // A ball that bounces around the world on its own
-    double ballX = 900;
-    double ballY = 500;
-    double ballSpeedX = 2.5;
-    double ballSpeedY = 1.75;
-    int ballRadius = 20;
+    // The hero
+    double heroX;
+    double heroY;
+    double heroSpeed = 2.5;
+    boolean heroFacingLeft = false;
+    boolean heroMoving = false;
+    int flashTimer = 0;
 
-    // Background stars: their positions in the world
+    // The coins: position, and whether it was already collected
+    int[] coinX = new int[COIN_COUNT];
+    int[] coinY = new int[COIN_COUNT];
+    boolean[] coinTaken = new boolean[COIN_COUNT];
+    int coinsCollected = 0;
+
+    // Background stars
     int[] starX = new int[STAR_COUNT];
     int[] starY = new int[STAR_COUNT];
 
@@ -47,46 +58,83 @@ public class Main implements Game {
 
     @Override
     public void init() {
+        sheet = SpriteSheet.load("assets/sprites.png", SPRITE_SIZE, SPRITE_SIZE);
+        heroWalk = new Animation(sheet.getFrames(0, 4), 8);
+        coinSpin = new Animation(sheet.getFrames(8, 4), 7);
+        heart = sheet.get(12);
+
         for (int i = 0; i < STAR_COUNT; i++) {
-            starX[i] = (int) (Math.random() * WORLD_WIDTH);
-            starY[i] = (int) (Math.random() * WORLD_HEIGHT);
+            starX[i] = randomBetween(0, WORLD_WIDTH);
+            starY[i] = randomBetween(0, WORLD_HEIGHT);
+        }
+        restart();
+    }
+
+    /** Puts the hero back in the start position and scatters the coins again. */
+    void restart() {
+        heroX = 300;
+        heroY = 200;
+        coinsCollected = 0;
+        for (int i = 0; i < COIN_COUNT; i++) {
+            coinX[i] = randomBetween(40, WORLD_WIDTH - 40);
+            coinY[i] = randomBetween(40, WORLD_HEIGHT - 40);
+            coinTaken[i] = false;
         }
     }
 
     @Override
     public void update() {
-        // Move the player
+        // ---- Movement
+        heroMoving = false;
         if (Input.isDown(Key.LEFT) || Input.isDown(Key.A)) {
-            playerX = playerX - playerSpeed;
+            heroX = heroX - heroSpeed;
+            heroFacingLeft = true;
+            heroMoving = true;
         }
         if (Input.isDown(Key.RIGHT) || Input.isDown(Key.D)) {
-            playerX = playerX + playerSpeed;
+            heroX = heroX + heroSpeed;
+            heroFacingLeft = false;
+            heroMoving = true;
         }
         if (Input.isDown(Key.UP) || Input.isDown(Key.W)) {
-            playerY = playerY - playerSpeed;
+            heroY = heroY - heroSpeed;
+            heroMoving = true;
         }
         if (Input.isDown(Key.DOWN) || Input.isDown(Key.S)) {
-            playerY = playerY + playerSpeed;
+            heroY = heroY + heroSpeed;
+            heroMoving = true;
         }
-        // Stay inside the world
-        playerX = clamp(playerX, 0, WORLD_WIDTH - playerSize);
-        playerY = clamp(playerY, 0, WORLD_HEIGHT - playerSize);
+        heroX = clamp(heroX, 0, WORLD_WIDTH - SPRITE_SIZE);
+        heroY = clamp(heroY, 0, WORLD_HEIGHT - SPRITE_SIZE);
 
+        // Walk animation only while moving; standing still shows the first frame.
+        if (heroMoving) {
+            heroWalk.update();
+        } else {
+            heroWalk.restart();
+        }
+        coinSpin.update();
+
+        // ---- Other keys
         if (Input.wasPressed(Key.SPACE)) {
-            colorIndex = (colorIndex + 1) % playerColors.length;
+            flashTimer = FLASH_UPDATES;
+        }
+        if (flashTimer > 0) {
+            flashTimer = flashTimer - 1;
+        }
+        if (Input.wasPressed(Key.R)) {
+            restart();
         }
         if (Input.wasPressed(Key.ESCAPE)) {
             Engine.stop();
         }
 
-        // Move the ball and bounce off the edges of the world
-        ballX = ballX + ballSpeedX;
-        ballY = ballY + ballSpeedY;
-        if (ballX < ballRadius || ballX > WORLD_WIDTH - ballRadius) {
-            ballSpeedX = -ballSpeedX;
-        }
-        if (ballY < ballRadius || ballY > WORLD_HEIGHT - ballRadius) {
-            ballSpeedY = -ballSpeedY;
+        // ---- Collecting coins: do the hero's and the coin's squares overlap?
+        for (int i = 0; i < COIN_COUNT; i++) {
+            if (!coinTaken[i] && overlaps(heroX, heroY, coinX[i], coinY[i])) {
+                coinTaken[i] = true;
+                coinsCollected = coinsCollected + 1;
+            }
         }
     }
 
@@ -94,15 +142,15 @@ public class Main implements Game {
     public void draw(Canvas canvas) {
         canvas.clear(Color.DARK_BLUE);
 
-        // ---- World space: point the camera so the player is in the middle of the screen
-        int cameraX = (int) playerX + playerSize / 2 - canvas.getWidth() / 2;
-        int cameraY = (int) playerY + playerSize / 2 - canvas.getHeight() / 2;
+        // ---- World space: the camera keeps the hero in the middle of the screen
+        int cameraX = (int) heroX + SPRITE_SIZE / 2 - canvas.getWidth() / 2;
+        int cameraY = (int) heroY + SPRITE_SIZE / 2 - canvas.getHeight() / 2;
         cameraX = (int) clamp(cameraX, 0, WORLD_WIDTH - canvas.getWidth());
         cameraY = (int) clamp(cameraY, 0, WORLD_HEIGHT - canvas.getHeight());
         canvas.setCamera(cameraX, cameraY);
 
         for (int i = 0; i < STAR_COUNT; i++) {
-            canvas.setPixel(starX[i], starY[i], Color.LIGHT_GRAY);
+            canvas.setPixel(starX[i], starY[i], Color.GRAY);
         }
         for (int x = 0; x <= WORLD_WIDTH; x = x + GRID_SIZE) {
             canvas.drawLine(x, 0, x, WORLD_HEIGHT, Color.DARK_GRAY);
@@ -112,32 +160,39 @@ public class Main implements Game {
         }
         canvas.drawRect(0, 0, WORLD_WIDTH, WORLD_HEIGHT, Color.RED);
 
-        // A line from the player to the ball (drawn first, so the ball covers its end)
-        canvas.drawLine((int) playerX + playerSize / 2, (int) playerY + playerSize / 2,
-                (int) ballX, (int) ballY, Color.PURPLE);
-        canvas.fillCircle((int) ballX, (int) ballY, ballRadius, Color.ORANGE);
-        canvas.drawCircle((int) ballX, (int) ballY, ballRadius, Color.WHITE);
+        for (int i = 0; i < COIN_COUNT; i++) {
+            if (!coinTaken[i]) {
+                canvas.drawBitmap(coinSpin.getFrame(), coinX[i], coinY[i]);
+            }
+        }
 
-        canvas.fillRect((int) playerX, (int) playerY, playerSize, playerSize, playerColors[colorIndex]);
-        canvas.drawRect((int) playerX, (int) playerY, playerSize, playerSize, Color.WHITE);
+        if (flashTimer > 0) {
+            canvas.drawSilhouette(heroWalk.getFrame(), (int) heroX, (int) heroY, heroFacingLeft, Color.WHITE);
+        } else {
+            canvas.drawBitmap(heroWalk.getFrame(), (int) heroX, (int) heroY, heroFacingLeft, false);
+        }
 
         // ---- Screen space: the camera is off, these stay put
         canvas.resetCamera();
-        drawColorPicker(canvas);
+        drawScore(canvas);
         drawMiniMap(canvas);
+        canvas.drawText("Arrows: move   Space: flash   R: restart   F3: stats", 6, canvas.getHeight() - 12, Color.GRAY);
+
+        if (coinsCollected == COIN_COUNT) {
+            drawCentered(canvas, "YOU WIN!", canvas.getHeight() / 2 - 24, Color.YELLOW, 4);
+            drawCentered(canvas, "Press R to play again", canvas.getHeight() / 2 + 16, Color.WHITE, 1);
+        }
     }
 
-    /** Top-left: the four colors, with a frame around the chosen one. */
-    void drawColorPicker(Canvas canvas) {
-        canvas.fillRect(4, 4, 4 + playerColors.length * 14, 18, Color.BLACK);
-        canvas.drawRect(4, 4, 4 + playerColors.length * 14, 18, Color.GRAY);
-        for (int i = 0; i < playerColors.length; i++) {
-            int x = 8 + i * 14;
-            canvas.fillRect(x, 8, 10, 10, playerColors[i]);
-            if (i == colorIndex) {
-                canvas.drawRect(x - 2, 6, 14, 14, Color.WHITE);
-            }
-        }
+    /** Top-left: a box with a heart, a coin and the count. */
+    void drawScore(Canvas canvas) {
+        String text = coinsCollected + " / " + COIN_COUNT;
+        int boxWidth = 46 + canvas.getTextWidth(text);
+        canvas.fillRect(4, 4, boxWidth, 24, Color.BLACK);
+        canvas.drawRect(4, 4, boxWidth, 24, Color.GRAY);
+        canvas.drawBitmap(heart, 8, 8);
+        canvas.drawBitmap(coinSpin.getFrame(), 26, 8);
+        canvas.drawText(text, 44, 12, Color.WHITE);
     }
 
     /** Bottom-right: the whole world shrunk 20 times. */
@@ -150,8 +205,32 @@ public class Main implements Game {
 
         canvas.fillRect(left, top, mapWidth, mapHeight, Color.BLACK);
         canvas.drawRect(left - 1, top - 1, mapWidth + 2, mapHeight + 2, Color.GRAY);
-        canvas.fillCircle(left + (int) ballX / shrink, top + (int) ballY / shrink, 1, Color.ORANGE);
-        canvas.fillRect(left + (int) playerX / shrink, top + (int) playerY / shrink, 2, 2, playerColors[colorIndex]);
+        for (int i = 0; i < COIN_COUNT; i++) {
+            if (!coinTaken[i]) {
+                canvas.setPixel(left + coinX[i] / shrink, top + coinY[i] / shrink, Color.YELLOW);
+            }
+        }
+        canvas.fillRect(left + (int) heroX / shrink, top + (int) heroY / shrink, 2, 2, Color.CYAN);
+    }
+
+    /** Text centered left-to-right, with a dark shadow one step down and right. */
+    void drawCentered(Canvas canvas, String text, int y, int color, int scale) {
+        int x = (canvas.getWidth() - canvas.getTextWidth(text, scale)) / 2;
+        canvas.drawText(text, x + scale, y + scale, Color.BLACK, scale);
+        canvas.drawText(text, x, y, color, scale);
+    }
+
+    /** True if two 16x16 sprites at these positions overlap (with a little forgiveness). */
+    static boolean overlaps(double ax, double ay, double bx, double by) {
+        double margin = 3;
+        return ax + margin < bx + SPRITE_SIZE - margin
+                && bx + margin < ax + SPRITE_SIZE - margin
+                && ay + margin < by + SPRITE_SIZE - margin
+                && by + margin < ay + SPRITE_SIZE - margin;
+    }
+
+    static int randomBetween(int min, int max) {
+        return min + (int) (Math.random() * (max - min));
     }
 
     static double clamp(double value, double min, double max) {

@@ -30,7 +30,7 @@ and Windows.
 | Key | Action |
 |---|---|
 | F11 or Alt+Enter (Option+Enter on a Mac) | toggle fullscreen |
-| F3 | show fps and timings in the title bar |
+| F3 | show fps and timings on screen |
 
 On a Mac, F11 may need the `fn` key.
 
@@ -41,12 +41,14 @@ Make a folder in `games/` with a `Main.java`:
 ```java
 import pge.Engine;
 import pge.Game;
+import pge.gfx.Bitmap;
 import pge.gfx.Canvas;
 import pge.gfx.Color;
 import pge.input.Input;
 import pge.input.Key;
 
 public class Main implements Game {
+    Bitmap hero;
     int x = 100;
     int y = 80;
 
@@ -55,6 +57,7 @@ public class Main implements Game {
     }
 
     public void init() {
+        hero = Bitmap.load("assets/hero.png");
     }
 
     public void update() {
@@ -68,12 +71,26 @@ public class Main implements Game {
 
     public void draw(Canvas canvas) {
         canvas.clear(Color.DARK_BLUE);
-        canvas.fillRect(x, y, 16, 16, Color.YELLOW);
+        canvas.drawBitmap(hero, x, y);
+        canvas.drawText("Hello!", 4, 4, Color.WHITE);
     }
 }
 ```
 
-Then run `java Build.java yourfolder`.
+Put your images in `games/yourfolder/assets/`, then run `java Build.java yourfolder`.
+
+### Pictures and text
+
+| You want | Use |
+|---|---|
+| one image | `Bitmap.load("assets/hero.png")`. Add a color key such as `0xFF00FF` to make one color see-through |
+| many same-sized images in one PNG | `SpriteSheet.load("assets/sprites.png", 16, 16)`, then `sheet.get(5)` |
+| an animation | `new Animation(sheet.getFrames(0, 4), 8)`: call `update()` every update, draw `getFrame()` |
+| a mirrored sprite | `canvas.drawBitmap(bitmap, x, y, flipX, flipY)` |
+| a one-color flash or shadow | `canvas.drawSilhouette(bitmap, x, y, flipX, Color.WHITE)` |
+| text | `canvas.drawText("Score 10", x, y, Color.WHITE)`, or add a scale (2, 3...) for titles |
+| centered text | `canvas.getTextWidth(text)` tells you how wide it is |
+| your own font | `canvas.setFont(Font.load("assets/myfont.png", 8, 8))`, laid out like `engine/src/pge/gfx/font.png` |
 
 `640, 360` is the size of the game's picture in pixels. The window shows it at a
 whole-number scale (3x on a 1080p screen), so pixels stay crisp. `480, 360` gives a 4:3
@@ -84,10 +101,14 @@ game.
 ```
 Build.java              build and run script
 engine/src/pge/         Engine (the game loop), Game, Window
-engine/src/pge/gfx/     Canvas (all drawing), Color
+engine/src/pge/gfx/     Canvas (all drawing), Color, Bitmap, SpriteSheet, Animation, Font (+ font.png)
 engine/src/pge/input/   Input, Key
-games/demo/             the demo game
+games/demo/             the demo game (and its assets/)
+tools/MakeAssets.java   draws the default font and the demo sprites with code
 ```
+
+The built-in art (font and demo sprites) is drawn by `tools/MakeAssets.java`. Run
+`java tools/MakeAssets.java` to re-create it, or simply edit the PNGs in any pixel editor.
 
 ## Engine code rules
 
@@ -102,7 +123,7 @@ The engine is meant to be read and extended by someone learning Java.
 ## Roadmap
 
 - [x] **M0:** window, game loop, fullscreen, `Canvas` primitives (pixels, lines, rectangles, circles), camera, keyboard
-- [ ] **M1:** `Bitmap` loading with transparency, flips, `SpriteSheet`, bitmap font and `drawText`, animation
+- [x] **M1:** `Bitmap` loading with transparency, flips, silhouettes, `SpriteSheet`, `Animation`, bitmap font and `drawText`
 - [ ] **M2:** `TileMap` from CSV (works with the Tiled editor), `Camera` follow and clamp, tile queries
 - [ ] **M3:** `Scene` and `GameObject`, UI (`Box`, `Label`, `Button`), mouse and pointer input, draw depth
 - [ ] **M4:** an example game and a short guide
