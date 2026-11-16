@@ -4,6 +4,8 @@ PGE (Pinto's Game Engine) is a small engine for making 2D games in Java. This gu
 starts with your first game and ends with you adding new features to the engine
 itself. Read it in order the first time. After that, use it to look things up.
 
+![PGE: Pinto's Game Engine, with screenshots of the example games](images/hero.png)
+
 1. [Getting started](#1-getting-started)
 2. [Your first game](#2-your-first-game)
 3. [How a game runs](#3-how-a-game-runs)
@@ -238,7 +240,11 @@ Copy the folder `games/starter` and name the copy `games/mygame`. Then run it:
 java Build.java mygame
 ```
 
-A yellow square appears, and you can move it with the arrow keys. Now open
+A yellow square appears, and you can move it with the arrow keys:
+
+![The starter game: a yellow square and a score on a dark blue screen](images/starter.png)
+
+Now open
 `games/mygame/Main.java`. It has three methods, and the engine calls them for you:
 
 | Method | When the engine calls it | What you do in it |
@@ -340,6 +346,11 @@ with `Engine.saveScreenshot("victory.png")`.
 ---
 
 ## 4. Pictures, animation and text
+
+![games/demo: an animated hero, spinning coins, text and a mini-map](images/demo.png)
+
+*`games/demo` uses everything in this chapter: a sprite sheet, a walking animation,
+spinning coins and text. It also has a camera and a mini-map.*
 
 ### Loading pictures
 
@@ -497,6 +508,11 @@ without sound. The game does not crash.
 
 ## 6. Levels, walls and the camera
 
+![games/platformer: the hero jumping in a level made of tiles](images/platformer.png)
+
+*`games/platformer` is built from this chapter: a tile map in front, another one for
+the hills behind, walls the hero cannot walk through, and a camera that follows.*
+
 ### Tile maps
 
 A level is often built from small square pictures called *tiles*, arranged in a
@@ -590,6 +606,11 @@ updates and draws all its objects for you.
 two different ways. Compare them. For example, the code that moves the hero is in
 the middle of `Main.java` in the first one, and in `Hero.java` in the second.
 
+![games/platformer-scenes: the hero, coins, slimes and a brick castle](images/level.png)
+
+*The level of `games/platformer-scenes`. The hero, every coin and every slime is a
+`GameObject` that looks after itself; `LevelScene` loads the map and keeps score.*
+
 ### A game object
 
 ```java
@@ -653,6 +674,8 @@ Engine.setScene(new LevelScene());
 ```
 
 ### Menus and buttons
+
+![The title screen of games/platformer-scenes, with Play and Quit buttons](images/title.png)
 
 Buttons, text and other screen elements are drawn on top of everything else. They
 use screen positions, so the camera does not move them:

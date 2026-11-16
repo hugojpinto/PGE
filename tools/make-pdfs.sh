@@ -30,7 +30,7 @@ work="$(mktemp -d)"
 for doc in GUIDE ARCHITECTURE; do
     title="$(head -1 docs/$doc.md | sed 's/^# //')"
     # gfm: GitHub's Markdown, so the links inside the docs work the same as on GitHub.
-    pandoc -f gfm -t html5 --standalone --embed-resources \
+    pandoc -f gfm -t html5 --standalone --embed-resources --resource-path=docs \
         --metadata title="$title" --variable title="" \
         --css tools/docs.css --syntax-highlighting tango \
         -o "$work/$doc.html" "docs/$doc.md"

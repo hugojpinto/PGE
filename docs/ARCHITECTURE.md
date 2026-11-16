@@ -4,6 +4,8 @@ This document explains how Pinto's Game Engine is built and why it was built tha
 way. Read it if you want to change the engine itself. If you only want to make a
 game with it, read the [Guide](GUIDE.md) instead.
 
+![PGE: Pinto's Game Engine, with screenshots of the example games](images/hero.png)
+
 1. [Goals](#1-goals)
 2. [The big picture](#2-the-big-picture)
 3. [Packages](#3-packages)
@@ -237,6 +239,11 @@ black bars at the sides. Only when the window is smaller than the game does it
 shrink the picture by a fraction. The scaling is set to "nearest neighbour", which
 copies pixels instead of blending them, so the picture stays sharp.
 
+![The coin counter and hearts, made 6 times bigger: every game pixel is a sharp square](images/zoom.png)
+
+*The top-left corner of the platformer, made 6 times bigger with nearest neighbour.
+Each square is one `int` in the array.*
+
 ### How fast is it?
 
 At 640 x 360 the picture has 230,400 pixels. The example games take about 2.3
@@ -333,6 +340,8 @@ any key releases that happen while another window is active.
 
 ## 8. Tile maps and the camera
 
+![games/platformer: two tile maps, one for the level and one for the hills behind it](images/platformer.png)
+
 ### TileMap
 
 A `TileMap` stores a grid of tile numbers. Like the picture, the grid is kept in a
@@ -392,6 +401,8 @@ you whether a rectangle is on the screen.
 already offers to every game. `SceneRunner` connects them to the engine: it
 implements the `Game` interface, and its `update()` and `draw()` simply call the
 current scene's. To the engine, a game made of scenes is just another `Game`.
+
+![games/platformer-scenes: the hero, coins and slimes are all GameObjects](images/level.png)
 
 ### What a scene holds
 
@@ -457,6 +468,8 @@ they are all there for the first update.
 position, a size, and whether it is visible), but it cannot be used on its own.
 Every kind of element extends it and writes its own `draw(Canvas)` method. Elements
 are drawn in screen positions, in the order they were added to the scene.
+
+![A title screen made of a Box, Labels and two Buttons](images/title.png)
 
 A `Button` remembers three things, and updates them once per update:
 

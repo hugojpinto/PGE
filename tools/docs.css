@@ -23,6 +23,9 @@ h3 { font-size: 12.5pt; margin-top: 16pt; color: #3c3c78; break-after: avoid; }
 p, li { orphans: 3; widows: 3; }
 a { color: #2f5fbf; text-decoration: none; }
 hr { display: none; }
+/* Screenshots: as wide as the page at most, and pixel art stays sharp. */
+img { max-width: 100%; image-rendering: pixelated; break-inside: avoid; }
+p:has(> img) { text-align: center; }
 code {
   font-family: "SF Mono", Menlo, Consolas, monospace;
   font-size: 0.86em;

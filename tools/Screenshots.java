@@ -53,16 +53,17 @@ public class Screenshots {
         new File(RAW_FOLDER).mkdirs();
         new File(IMAGE_FOLDER).mkdirs();
 
-        String[] games = {"demo", "platformer", "platformer-scenes"};
+        String[] games = {"demo", "platformer", "platformer-scenes", "starter"};
         for (int i = 0; i < games.length; i++) {
             startGame(games[i]);
         }
 
-        String[] shots = {"demo", "platformer", "title", "level"};
+        String[] shots = {"demo", "platformer", "title", "level", "starter"};
         for (int i = 0; i < shots.length; i++) {
             enlarge(new File(RAW_FOLDER, shots[i] + ".png"), new File(IMAGE_FOLDER, shots[i] + ".png"));
         }
         makeHero();
+        makeZoom();
         System.out.println("Pictures are in " + IMAGE_FOLDER + "/");
     }
 
@@ -159,6 +160,26 @@ public class Screenshots {
         ImageIO.write(image, "png", new File(IMAGE_FOLDER, "hero.png"));
     }
 
+    /**
+     * A close-up of the level's top-left corner (the coin counter and the hearts),
+     * each game pixel made 6x6, so you can see the squares the picture is made of.
+     */
+    static void makeZoom() throws IOException {
+        BufferedImage level = ImageIO.read(new File(RAW_FOLDER, "level.png"));
+        int left = 0;
+        int top = 0;
+        int width = 118;
+        int height = 30;
+        int scale = 6;
+        BufferedImage zoom = new BufferedImage(width * scale, height * scale, BufferedImage.TYPE_INT_RGB);
+        for (int y = 0; y < zoom.getHeight(); y++) {
+            for (int x = 0; x < zoom.getWidth(); x++) {
+                zoom.setRGB(x, y, level.getRGB(left + x / scale, top + y / scale));
+            }
+        }
+        ImageIO.write(zoom, "png", new File(IMAGE_FOLDER, "zoom.png"));
+    }
+
     /** A picture half as wide and half as tall: keeps one of every two pixels. */
     static Bitmap halfSize(Bitmap big) {
         Bitmap small = new Bitmap(big.getWidth() / 2, big.getHeight() / 2);
@@ -210,6 +231,14 @@ public class Screenshots {
             tap(KeyEvent.VK_SPACE, 14);
             waitUpdates(12);
             shot("platformer");
+        } else if (gameName.equals("starter")) {
+            for (int i = 0; i < 5; i++) {
+                tap(KeyEvent.VK_SPACE, 3);
+            }
+            hold(KeyEvent.VK_RIGHT);
+            hold(KeyEvent.VK_UP);
+            waitUpdates(40);
+            shot("starter");
         } else if (gameName.equals("platformer-scenes")) {
             waitUpdates(30);
             shot("title");
