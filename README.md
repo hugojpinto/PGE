@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="docs/images/hero.png" alt="PGE: Pinto's Game Engine, with screenshots of the example games">
+</p>
+
 # PGE: Pinto's Game Engine
 
 PGE is a small engine for making 2D games in Java. It was written for a first-year
@@ -18,6 +22,30 @@ If you are new to PGE, start with the [PGE Guide](docs/GUIDE.md)
 everything works, and has ideas for extending the engine. If you want to change the
 engine itself, read [PGE Architecture](docs/ARCHITECTURE.md)
 ([PDF](docs/ARCHITECTURE.pdf)).
+
+## What it looks like
+
+These are the example games that come with PGE. Every picture below was drawn by the
+engine itself, one pixel at a time.
+
+<table>
+  <tr>
+    <td width="50%"><img src="docs/images/title.png" alt="Title screen of the platformer, with Play and Quit buttons"></td>
+    <td width="50%"><img src="docs/images/level.png" alt="The hero jumps towards a brick castle full of coins, with slimes on the ground"></td>
+  </tr>
+  <tr>
+    <td><b>games/platformer-scenes</b>: a title screen made of UI buttons.</td>
+    <td>The level: tile maps, coins, slimes, hearts, sound and music, built with <code>Scene</code>s and <code>GameObject</code>s.</td>
+  </tr>
+  <tr>
+    <td><img src="docs/images/platformer.png" alt="The hero mid-jump in the platformer level"></td>
+    <td><img src="docs/images/demo.png" alt="Top-down demo: the hero in a starry world with coins and a mini-map"></td>
+  </tr>
+  <tr>
+    <td><b>games/platformer</b>: the same game with the <code>Game</code> interface, so you can compare the two styles.</td>
+    <td><b>games/demo</b>: a top-down world with a following camera, animated sprites, a mini-map and mouse clicks.</td>
+  </tr>
+</table>
 
 ## Requirements
 
@@ -45,6 +73,7 @@ and Windows.
 |---|---|
 | F11 or Alt+Enter (Option+Enter on a Mac) | toggle fullscreen |
 | F3 | show fps and timings on screen |
+| F12 | save a screenshot (`screenshot-1.png`, ...) in the game's folder |
 
 On a Mac, F11 may need the `fn` key.
 
@@ -223,10 +252,15 @@ docs/ARCHITECTURE.md    how the engine is built and why (and ARCHITECTURE.pdf)
 tools/make-pdfs.sh      remakes the PDFs from the Markdown (needs pandoc and Chrome or Brave)
 tools/MakeAssets.java   draws the built-in art and the platformer level with code
 tools/MakeSounds.java   makes the platformer's sounds and music with Synth
+tools/Screenshots.java  plays the example games by itself and makes the pictures in docs/images/
 ```
 
 The built-in art (font, sprites, tiles) and the platformer's level are made by `tools/MakeAssets.java`. Run
 `java tools/MakeAssets.java` to re-create it, or simply edit the PNGs in any pixel editor.
+
+The pictures in this README are made by `tools/Screenshots.java`. After changing a
+game, run `java Build.java`, then `java -cp out/engine tools/Screenshots.java` to take
+them again. Each game opens for a few seconds while it plays itself.
 
 ## Engine code rules
 

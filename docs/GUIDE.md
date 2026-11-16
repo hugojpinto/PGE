@@ -333,7 +333,9 @@ shooting or choosing a menu item.
 
 Some keys work in every game. F11 (or Alt+Enter) switches fullscreen on and off.
 F3 shows how many milliseconds each frame takes. Each frame can take up to 16.7
-milliseconds, and the example games use about 2.
+milliseconds, and the example games use about 2. F12 saves a screenshot of the game
+as `screenshot-1.png`, `screenshot-2.png` and so on. A game can also take one itself
+with `Engine.saveScreenshot("victory.png")`.
 
 ---
 

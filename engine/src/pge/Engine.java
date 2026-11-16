@@ -1,5 +1,9 @@
 package pge;
 
+import java.awt.image.BufferedImage;
+import java.io.File;
+import java.io.IOException;
+import javax.imageio.ImageIO;
 import pge.gfx.Canvas;
 import pge.gfx.Color;
 import pge.input.Input;
@@ -25,6 +29,7 @@ import pge.scene.SceneRunner;
  * Keys that work in every game:
  *   F11, or Alt+Enter (Option+Enter on a Mac)   switch fullscreen on or off
  *   F3                                           show how long each frame takes
+ *   F12                                          save a screenshot (screenshot-1.png, ...)
  *
  * THE GAME LOOP
  * Every game engine has a loop at its centre that runs until the game ends. Each time
@@ -69,6 +74,10 @@ public final class Engine {
     private static int framesPerSecond = 0;
     private static double updateMillis = 0;
     private static double drawMillis = 0;
+
+    // A screenshot that was asked for, saved after the next draw (null when none).
+    private static String screenshotFile = null;
+    private static int screenshotCount = 0;
 
     /** Nobody needs an Engine object: everything here is static, because there is only one game. */
     private Engine() {
@@ -175,6 +184,15 @@ public final class Engine {
         window.setTitle(windowTitle);
     }
 
+    /**
+     * Saves the next finished frame as a PNG file, at the game's own size (one file
+     * pixel per game pixel). The file is written after the next draw(), so the picture
+     * is never half drawn. F12 calls this in every game.
+     */
+    public static void saveScreenshot(String fileName) {
+        screenshotFile = fileName;
+    }
+
     public static boolean isFullscreen() {
         return window.isFullscreen();
     }
@@ -236,6 +254,10 @@ public final class Engine {
             long drawStart = System.nanoTime();
             canvas.resetCamera();
             game.draw(canvas);
+            if (screenshotFile != null) {
+                writeScreenshot(screenshotFile);
+                screenshotFile = null;
+            }
             if (showStats) {
                 drawStats();
             }
@@ -265,6 +287,38 @@ public final class Engine {
         }
         if (Input.wasPressed(Key.F3)) {
             showStats = !showStats;
+        }
+        if (Input.wasPressed(Key.F12)) {
+            // Pick the first free name, so we never overwrite an older screenshot.
+            screenshotCount = screenshotCount + 1;
+            while (new File("screenshot-" + screenshotCount + ".png").exists()) {
+                screenshotCount = screenshotCount + 1;
+            }
+            saveScreenshot("screenshot-" + screenshotCount + ".png");
+        }
+    }
+
+    /**
+     * Copies the canvas into a BufferedImage, Java's picture class, and lets ImageIO
+     * write it as a PNG. We copy instead of saving the window's own image so the file
+     * does not change if the next frame starts drawing while it is being written.
+     */
+    private static void writeScreenshot(String fileName) {
+        canvas.resetCamera();   // getPixel uses the camera; we want screen positions
+        int width = canvas.getWidth();
+        int height = canvas.getHeight();
+        BufferedImage image = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
+        for (int y = 0; y < height; y++) {
+            for (int x = 0; x < width; x++) {
+                image.setRGB(x, y, canvas.getPixel(x, y));
+            }
+        }
+        try {
+            ImageIO.write(image, "png", new File(fileName));
+            System.out.println("Saved screenshot " + fileName);
+        } catch (IOException problem) {
+            // A failed screenshot should not end the game, so we only report it.
+            System.out.println("Could not save the screenshot " + fileName + ": " + problem.getMessage());
         }
     }
 

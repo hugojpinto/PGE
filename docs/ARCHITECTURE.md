@@ -148,7 +148,7 @@ while the game is running:
     if it is not yet time for nextUpdate: wait a little, then check again
     while it is time for nextUpdate (at most 5 times in a row):
         Input.update()
-        check the engine's own keys (F11, Alt+Enter, F3)
+        check the engine's own keys (F11, Alt+Enter, F3, F12)
         game.update()
         nextUpdate = nextUpdate + 1/60 of a second
     if we are still behind: nextUpdate = now + 1/60 of a second
